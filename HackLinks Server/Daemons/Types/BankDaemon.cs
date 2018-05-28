@@ -64,7 +64,7 @@ namespace HackLinks_Server.Daemons.Types
         public bool CheckFolders(CommandProcess process)
         {
             var bankFolder = process.computer.fileSystem.rootFile.GetFile("bank");
-            if (bankFolder == null || !bankFolder.IsFolder())
+            if (bankFolder == null || !bankFolder.Type.Equals(File.FileType.Directory))
             {
                 process.Print("No bank daemon folder was found ! (Contact the admin of this node to create one as the bank is useless without one)");
                 return false;

@@ -63,6 +63,8 @@
   <ItemGroup>
     <Compile Include="Computers\Account.cs" />
     <Compile Include="Computers\CompiledFileManager.cs" />
+    <Compile Include="Computers\Files\FunctionFile.cs" />
+    <Compile Include="Computers\Files\File.cs" />
     <Compile Include="Computers\Kernel.cs" />
     <Compile Include="Computers\Processes\BankClient.cs" />
     <Compile Include="Computers\Processes\CommandProcess.cs" />
@@ -100,7 +102,7 @@
     <Compile Include="Database\DatabaseDump.cs" />
     <Compile Include="Database\DatabaseLink.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="Computers\Files\File.cs" />
+    <Compile Include="Computers\Files\RegularFile.cs" />
     <Compile Include="GameClient.cs" />
     <Compile Include="Permissions.cs" />
     <Compile Include="Program.cs" />

@@ -109,7 +109,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (file.Name == command[1])
                 {
-                    if (!file.IsFolder())
+                    if (!file.Type.Equals(File.FileType.Directory))
                     {
                         process.Print("You cannot change active directory to a file.");
                         return true;

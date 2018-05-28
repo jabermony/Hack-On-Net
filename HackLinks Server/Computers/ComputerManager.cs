@@ -90,7 +90,7 @@ namespace HackLinks_Server.Computers
                     parent.children.Add(child);
 
                     fixedFiles.Add(child);
-                    if(child.IsFolder())
+                    if(child.Type.Equals(File.FileType.Directory))
                     {
                         fileQueue.Enqueue(child);
                     }

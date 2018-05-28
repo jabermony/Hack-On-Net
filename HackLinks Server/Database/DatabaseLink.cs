@@ -75,8 +75,6 @@ namespace HackLinks_Server.Database
 
                                             File newFile = newNode.fileSystem.CreateFile(fileReader.GetInt32(0), newNode, newNode.fileSystem.rootFile, fileName);
 
-                                            newFile.isFolder = fileType == 1;
-
                                             newFile.ParentId = fileReader.GetInt32(2);
                                             newFile.OwnerId = fileReader.GetInt32(9);
                                             newFile.Group = (Group)fileReader.GetInt32(7);
@@ -510,7 +508,7 @@ namespace HackLinks_Server.Database
                         new MySqlParameter("id", child.id),
                         new MySqlParameter("name", child.Name),
                         new MySqlParameter("parentFile", child.ParentId),
-                        new MySqlParameter("type", child.isFolder ? 1 : 0),
+                        new MySqlParameter("type", child.Type == File.FileType.Directory ? 1 : 0),
                         new MySqlParameter("specialType", child.Type),
                         new MySqlParameter("content", child.Content),
                         new MySqlParameter("computerId", child.computerId),

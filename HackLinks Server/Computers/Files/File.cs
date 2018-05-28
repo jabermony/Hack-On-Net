@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HackLinks_Server.Computers;
-using HackLinks_Server.Computers.Files;
+﻿using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Processes;
 using HackLinks_Server.Util;
-using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
 
 namespace HackLinks_Server.Files
 {
-    public class File
+    public abstract class File
     {
-
         /// <summary>FilType determines how a file will be handled by the system</summary>
         public enum FileType
         {
@@ -22,7 +16,7 @@ namespace HackLinks_Server.Files
             Directory,
             Link,
             LOG,
-            // TODO other types 
+            Special, // E.G. Character devices, Block devices, and Sockets
         }
 
         public readonly int id;
@@ -30,13 +24,10 @@ namespace HackLinks_Server.Files
         private string name;
         private int ownerId;
         private Group group;
-        private string content = "";
 
         private File parent;
         private int parentId;
         public int computerId;
-
-        private FileType type = FileType.Regular;
 
         public bool Dirty { get; set; }
 
@@ -48,15 +39,9 @@ namespace HackLinks_Server.Files
 
         public Group Group { get => group; set { group = value; Dirty = true; } }
 
-        public string Content { get => content; set { content = value; Dirty = true; Checksum = content.GetHashCode(); } } // TODO make hash function portable/low collision eg. https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed
-        public int Checksum { get; private set; }
-
-        public int ParentId { get => parentId; set { parentId = value; Dirty = true; } }
-        public int ComputerId { get => computerId; set { computerId = value; Dirty = true; } }
-
-        public FileType Type { get => type; set { type = value; Dirty = true; } }
-
-        internal File Parent { get => parent;
+        internal File Parent
+        {
+            get => parent;
             set
             {
                 if (parent != null)
@@ -65,15 +50,23 @@ namespace HackLinks_Server.Files
                 }
 
                 parent = value;
-                if(parent != null)
+                if (parent != null)
                 {
                     ParentId = parent.id;
                 }
             }
         }
 
+        public int ParentId { get => parentId; set { parentId = value; Dirty = true; } }
+        public int ComputerId { get => computerId; set { computerId = value; Dirty = true; } }
+
         public List<File> children = new List<File>();
-        internal bool isFolder;
+
+        private FileType type = FileType.Regular;
+        public FileType Type { get => type; set { type = value; Dirty = true; } }
+
+        public abstract string Content { get; set; }
+        public abstract int Checksum { get; }
 
         protected File(int id, Node computer, File parent, string name)
         {
@@ -81,56 +74,21 @@ namespace HackLinks_Server.Files
             this.computerId = computer.id;
             this.Name = name;
             this.Parent = parent;
-            if(parent != null)
+            if (parent != null)
             {
                 this.Parent.children.Add(this);
             }
             Permissions = new FilePermissions(this);
         }
 
-        /// <summary>
-        /// Create a new file and register it a new file id with the given <see cref="FileSystemManager"/>
-        /// </summary>
-        /// <param name="manager"></param>
-        /// <param name="computer"></param>
-        /// <param name="parent"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public static File CreateNewFile(FileSystemManager manager, Node computer, File parent, string name)
+        public File GetFile(string name)
         {
-            File newFile = new File(manager.GetNewFileId(), computer, parent, name);
-            manager.RegisterNewFile(newFile);
-            return newFile;
-        }
-
-        /// <summary>
-        /// Attempt to create a new file with the given id and register it with the given <see cref="FileSystemManager"/>
-        /// It's usually better to use <see cref="CreateNewFile(FileSystemManager, Node, File, string)"/> unless you need to explicitly specify the file id.
-        /// </summary>
-        /// <param name="manager"></param>
-        /// <param name="computer"></param>
-        /// <param name="parent"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        /// <exception cref="System.ArgumentException">Thrown when the id is already registered</exception>
-        public static File CreateNewFile(int id, FileSystemManager manager, Node computer, File parent, string name)
-        {
-            if (manager.IsIdInUse(id))
+            foreach (File file in children)
             {
-                throw new ArgumentException($"File id \"{id}\" is already in use");
+                if (file.Name == name)
+                    return file;
             }
-
-            File newFile = new File(id, computer, parent, name);
-            manager.RegisterNewFile(newFile);
-            return newFile;
-        }
-
-        public static File CreateNewFolder(FileSystemManager manager, Node computer, File parent, string name)
-        {
-            File newFile = new File(manager.GetNewFileId(), computer, parent, name);
-            newFile.isFolder = true;
-            manager.RegisterNewFile(newFile);
-            return newFile;
+            return null;
         }
 
         public bool HasExecutePermission(Credentials credentials)
@@ -204,9 +162,40 @@ namespace HackLinks_Server.Files
             return Permissions.CheckPermission(FilePermissions.PermissionType.Others, read, write, execute);
         }
 
-        virtual public bool IsFolder()
+        public File GetFileAtPath(string path)
         {
-            return isFolder;
+            string[] pathSteps = path.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            File activeFolder = this;
+            for (int i = 0; i < pathSteps.Length - 1; i++)
+            {
+                var folder = activeFolder.GetFile(pathSteps[i]);
+                if (folder == null || !folder.Type.Equals(FileType.Directory))
+                    return null;
+                activeFolder = folder;
+            }
+            return activeFolder.GetFile(pathSteps[pathSteps.Length - 1]);
+        }
+
+        public void PrintFolderRecursive(int depth)
+        {
+            string tabs = new String(' ', depth);
+            Logger.Debug(tabs + id + "  d- " + Name);
+            foreach (var item in children)
+            {
+                if (item.Type.Equals(FileType.Directory))
+                {
+                    item.PrintFolderRecursive(depth + 1);
+                }
+                else
+                {
+                    Logger.Debug(tabs + " " + item.id + "  f- " + item.Name);
+                }
+            }
+        }
+
+        public void SetType(int specType)
+        {
+            Type = (FileType)specType;
         }
 
         virtual public void RemoveFile()
@@ -227,57 +216,5 @@ namespace HackLinks_Server.Files
                 Server.Instance.GetComputerManager().GetNodeById(ComputerId).logs.Remove(log);
             }
         }
-
-        public void SetType(int specType)
-        {
-            Type = (FileType)specType;
-        }
-
-        public string[] GetLines()
-        {
-            return this.Content.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.None);
-        }
-
-        public File GetFile(string name)
-        {
-            foreach (File file in children)
-            {
-                if (file.Name == name)
-                    return file;
-            }
-            return null;
-        }
-
-        public File GetFileAtPath(string path)
-        {
-            string[] pathSteps = path.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            File activeFolder = this;
-            for (int i = 0; i < pathSteps.Length - 1; i++)
-            {
-                var folder = activeFolder.GetFile(pathSteps[i]);
-                if (folder == null || !folder.IsFolder())
-                    return null;
-                activeFolder = folder;
-            }
-            return activeFolder.GetFile(pathSteps[pathSteps.Length - 1]);
-        }
-
-        public void PrintFolderRecursive(int depth)
-        {
-            string tabs = new String(' ', depth);
-            Logger.Debug(tabs + id + "  d- " + Name);
-            foreach (var item in children)
-            {
-                if (item.IsFolder())
-                {
-                    item.PrintFolderRecursive(depth + 1);
-                }
-                else
-                {
-                    Logger.Debug(tabs + " " + item.id + "  f- " + item.Name);
-                }
-            }
-        }
-
     }
 }

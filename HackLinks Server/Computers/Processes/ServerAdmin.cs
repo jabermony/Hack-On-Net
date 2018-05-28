@@ -72,7 +72,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("File not found");
                 return true;
             }
-            if (file.IsFolder())
+            if (file.Type.Equals(File.FileType.Directory))
             {
                 process.Print("Invalid file, cannot be folder");
                 return true;

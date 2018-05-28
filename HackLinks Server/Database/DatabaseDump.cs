@@ -80,11 +80,11 @@ namespace HackLinks_Server.Database
             "LOCK TABLES `files` WRITE",
             "/*!40000 ALTER TABLE `files` DISABLE KEYS */",
             "INSERT INTO `files` VALUES " +
-            "(1,'',0,1,0,'',1,0,774,0)," +
+            "(1,'',0,1,1,'',1,0,774,0)," +
             "(2,'daemons',1,1,0,'',1,1,774,0)," +
             "(3,'autorun',2,0,0,'irc\r\nbank',1,1,774,0)," +
             "(4,'irc',2,0,1,'IRC',1,0,774,0)," +
-            "(5,'etc',1,1,0,'',1,1,774,0)," +
+            "(5,'etc',1,1,1,'',1,1,774,0)," +
             "(6,'passwd',5,0,0,'" +
             "root:x:0:0:root:/root:/bin/hash\r\n" +
             "admin:x:1:1:root:/root:/bin/hash\r\n" +
@@ -100,7 +100,7 @@ namespace HackLinks_Server.Database
             "(8,'bank',2,0,1,'BANK',1,0,774,0)," +
             "(9,'bank',1,1,1,'bank',1,0,774,0)," +
             "(10,'accounts.db',9,0,1,'',1,0,774,0)," +
-            "(11,'bin',1,1,0,'',1,0,774,0)," +
+            "(11,'bin',1,1,1,'',1,0,774,0)," +
             "(0,'hackybox',11,0,0,'hackybox',1,0,774,0),"+
             "(0,'ping',11,0,0,'hackybox',1,0,774,0),"+
             "(0,'connect',11,0,0,'hackybox',1,0,774,0),"+

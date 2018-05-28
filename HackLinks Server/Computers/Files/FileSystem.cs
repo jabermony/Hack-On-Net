@@ -23,17 +23,17 @@ namespace HackLinks_Server.Computers.Files
 
         public File CreateFile(Node computer, File parent, string fileName)
         {
-            return File.CreateNewFile(fileSystemManager, computer, parent, fileName);
+            return RegularFile.CreateNewFile(fileSystemManager, computer, parent, fileName);
         }
 
         public File CreateFile(int id, Node computer, File parent, string fileName)
         {
-            return File.CreateNewFile(id, fileSystemManager, computer, parent, fileName);
+            return RegularFile.CreateNewFile(id, fileSystemManager, computer, parent, fileName);
         }
 
         public File CreateFolder(Node computer, File parent, string fileName)
         {
-            return File.CreateNewFolder(fileSystemManager, computer, parent, fileName);
+            return RegularFile.CreateNewFolder(fileSystemManager, computer, parent, fileName);
         }
     }
 }

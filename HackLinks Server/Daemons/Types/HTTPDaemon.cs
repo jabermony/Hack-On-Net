@@ -66,7 +66,7 @@ namespace HackLinks_Server.Daemons.Types
         public void LoadWebPages()
         {
             File www = node.fileSystem.rootFile.GetFile("www");
-            if (www == null || !www.IsFolder())
+            if (www == null || !www.Type.Equals(File.FileType.Directory))
                 return;
             foreach(File file in www.children)
             {

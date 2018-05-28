@@ -198,7 +198,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("File " + cmdArgs[0] + " not found.");
                 return true;
             }
-            if (file.IsFolder())
+            if (file.Type.Equals(File.FileType.Directory))
             {
                 process.Print("You cannot display a directory.");
                 return true;
@@ -405,7 +405,7 @@ namespace HackLinks_Server.Computers.Processes
                     if (file.HasReadPermission(process.Credentials))
                     {
                         fileList.AddRange(new string[] {
-                                file.Name, (file.IsFolder() ? "d" : "f"), (file.HasWritePermission(process.Credentials) ? "w" : "-")
+                                file.Name, (file.Type.Equals(File.FileType.Directory) ? "d" : "f"), (file.HasWritePermission(process.Credentials) ? "w" : "-")
                             });
                     }
                     else

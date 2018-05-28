@@ -86,11 +86,11 @@ namespace HackLinks_Server.Computers.Processes
                     {
                         dnsFolder = process.computer.fileSystem.CreateFile(daemon.computer, process.computer.fileSystem.rootFile, "dns");
                         dnsFolder.OwnerId = 0; // root
-                        dnsFolder.isFolder = true;
+                        dnsFolder.Type = File.FileType.Directory;
                     }
                     else
                     {
-                        if (!dnsFolder.IsFolder())
+                        if (!dnsFolder.Type.Equals(File.FileType.Directory))
                             return true;
                     }
                     File dnsEntries = dnsFolder.GetFile("entries.db");
@@ -101,7 +101,7 @@ namespace HackLinks_Server.Computers.Processes
                         dnsEntries.Permissions.SetPermission(FilePermissions.PermissionType.Group, true, true, true);
                         dnsEntries.Group = Group.ADMIN;
                     }
-                    else if (dnsEntries.IsFolder())
+                    else if (dnsEntries.Type.Equals(File.FileType.Directory))
                     {
                         dnsEntries.RemoveFile();
                         dnsEntries = process.computer.fileSystem.CreateFile(process.computer, dnsFolder, "entries.db");

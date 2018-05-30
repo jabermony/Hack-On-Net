@@ -193,11 +193,6 @@ namespace HackLinks_Server.Files
             }
         }
 
-        public void SetType(int specType)
-        {
-            Type = (FileType)specType;
-        }
-
         virtual public void RemoveFile()
         {
             Parent.children.Remove(this);

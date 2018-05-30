@@ -58,7 +58,7 @@ namespace HackLinks_Server.Database
                                     ownerId = reader.GetInt32(2)
                                 };
 
-                                MySqlCommand fileCommand = new MySqlCommand("SELECT * FROM files WHERE computerId = @0", cn1);
+                                MySqlCommand fileCommand = new MySqlCommand("SELECT id, name, parentFile, type, content, owner, groupId, permissions FROM files WHERE computerId = @0", cn1);
                                 fileCommand.Parameters.Add(new MySqlParameter("0", newNode.id));
                                 List<File> computerFiles = new List<File>();
 
@@ -68,19 +68,19 @@ namespace HackLinks_Server.Database
                                     {
                                         while (fileReader.Read())
                                         {
-                                            int fileType = fileReader.GetByte(3);
+                                            int fileId = fileReader.GetInt32(0);
                                             string fileName = fileReader.GetString(1);
 
                                             Logger.Info($"Creating file {fileName} with id {fileReader.GetInt32(0)}");
 
-                                            File newFile = newNode.fileSystem.CreateFile(fileReader.GetInt32(0), newNode, newNode.fileSystem.rootFile, fileName);
+                                            File newFile = newNode.fileSystem.CreateFile(fileId, newNode, newNode.fileSystem.rootFile, fileName);
 
                                             newFile.ParentId = fileReader.GetInt32(2);
-                                            newFile.OwnerId = fileReader.GetInt32(9);
-                                            newFile.Group = (Group)fileReader.GetInt32(7);
-                                            newFile.Permissions.PermissionValue = fileReader.GetInt32(8);
-                                            newFile.Content = fileReader.GetString(5);
-                                            newFile.SetType(fileReader.GetInt32(4));
+                                            newFile.Type = (File.FileType)fileReader.GetInt32(3);
+                                            newFile.Content = fileReader.GetString(4);
+                                            newFile.Group = (Group)fileReader.GetInt32(5);
+                                            newFile.OwnerId = fileReader.GetInt32(6);
+                                            newFile.Permissions.PermissionValue = fileReader.GetInt32(7);
 
                                             computerFiles.Add(newFile);
 
@@ -492,13 +492,13 @@ namespace HackLinks_Server.Database
         {
             MySqlCommand fileCommand = new MySqlCommand(
                 "INSERT INTO files" +
-                " (id, name, parentFile, type, specialType, content, computerId, owner, groupId, permissions)" +
+                " (id, name, parentFile, type, content, computerId, owner, groupId, permissions)" +
                 " VALUES" +
-                " (@id, @name, @parentFile, @type, @specialType, @content, @computerId, @owner, @groupId, @permissions)" +
+                " (@id, @name, @parentFile, @type, @content, @computerId, @owner, @groupId, @permissions)" +
                 " ON DUPLICATE KEY UPDATE" +
                 " name = @name," +
                 " parentFile = @parentFile," +
-                " specialType = @specialType," +
+                " type = @type," +
                 " content = @content," +
                 " groupId = @groupId," +
                 " permissions = @permissions," +
@@ -508,8 +508,7 @@ namespace HackLinks_Server.Database
                         new MySqlParameter("id", child.id),
                         new MySqlParameter("name", child.Name),
                         new MySqlParameter("parentFile", child.ParentId),
-                        new MySqlParameter("type", child.Type == File.FileType.Directory ? 1 : 0),
-                        new MySqlParameter("specialType", child.Type),
+                        new MySqlParameter("type", child.Type),
                         new MySqlParameter("content", child.Content),
                         new MySqlParameter("computerId", child.computerId),
                         new MySqlParameter("groupId", child.Group),

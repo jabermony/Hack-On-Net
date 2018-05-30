@@ -64,7 +64,6 @@ namespace HackLinks_Server.Database
             " `name` varchar(255) NOT NULL," +
             " `parentFile` int(11) NOT NULL," +
             " `type` tinyint(4) NOT NULL," +
-            " `specialType` int(11) NOT NULL," +
             " `content` text," +
             " `computerId` int(11) NOT NULL," +
             " `groupId` int(11) NOT NULL," +
@@ -80,46 +79,46 @@ namespace HackLinks_Server.Database
             "LOCK TABLES `files` WRITE",
             "/*!40000 ALTER TABLE `files` DISABLE KEYS */",
             "INSERT INTO `files` VALUES " +
-            "(1,'',0,1,1,'',1,0,774,0)," +
-            "(2,'daemons',1,1,0,'',1,1,774,0)," +
-            "(3,'autorun',2,0,0,'irc\r\nbank',1,1,774,0)," +
-            "(4,'irc',2,0,1,'IRC',1,0,774,0)," +
-            "(5,'etc',1,1,1,'',1,1,774,0)," +
-            "(6,'passwd',5,0,0,'" +
+            "(1,'',0,1,'',1,0,774,0)," +
+            "(2,'daemons',1,0,'',1,1,774,0)," +
+            "(3,'autorun',2,0,'irc\r\nbank',1,1,774,0)," +
+            "(4,'irc',2,0,'IRC',1,0,774,0)," +
+            "(5,'etc',1,1,'',1,1,774,0)," +
+            "(6,'passwd',5,0,'" +
             "root:x:0:0:root:/root:/bin/hash\r\n" +
             "admin:x:1:1:root:/root:/bin/hash\r\n" +
             "user:x:2:2:root:/root:/bin/hash\r\n" +
             "guest:x:3:3:root:/root:/bin/hash\r\n" +
             "',1,1,774,0),"+
-            "(7,'group',5,0,0,'" +
+            "(7,'group',5,0,'" +
             "root:x:0:\r\n" +
             "admin:x:1:root,admin\r\n" +
             "user:x:2:root,admin,user\r\n" +
             "guest:x:3:root,admin,user,guest\r\n" +
             "',1,1,774,0),"+
-            "(8,'bank',2,0,1,'BANK',1,0,774,0)," +
-            "(9,'bank',1,1,1,'bank',1,0,774,0)," +
-            "(10,'accounts.db',9,0,1,'',1,0,774,0)," +
-            "(11,'bin',1,1,1,'',1,0,774,0)," +
-            "(0,'hackybox',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'ping',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'connect',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'disconnect',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'dc',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'ls',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'touch',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'view',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'mkdir',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'rm',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'login',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'chown',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'chmod',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'fedit',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'netmap',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'music',11,0,0,'hackybox',1,0,774,0),"+
-            "(0,'admin',11,0,0,'serveradmin',1,0,774,0),"+
-            "(0,'cadmin',11,0,0,'computeradmin',1,0,774,0)," +
-            "(0,'hash',11,0,0,'hash',1,0,774,0)", 
+            "(8,'bank',2,0,'BANK',1,0,774,0)," +
+            "(9,'bank',1,1,'bank',1,0,774,0)," +
+            "(10,'accounts.db',9,0,'',1,0,774,0)," +
+            "(11,'bin',1,1,'',1,0,774,0)," +
+            "(0,'hackybox',11,0,'hackybox',1,0,774,0),"+
+            "(0,'ping',11,0,'hackybox',1,0,774,0),"+
+            "(0,'connect',11,0,'hackybox',1,0,774,0),"+
+            "(0,'disconnect',11,0,'hackybox',1,0,774,0),"+
+            "(0,'dc',11,0,'hackybox',1,0,774,0),"+
+            "(0,'ls',11,0,'hackybox',1,0,774,0),"+
+            "(0,'touch',11,0,'hackybox',1,0,774,0),"+
+            "(0,'view',11,0,'hackybox',1,0,774,0),"+
+            "(0,'mkdir',11,0,'hackybox',1,0,774,0),"+
+            "(0,'rm',11,0,'hackybox',1,0,774,0),"+
+            "(0,'login',11,0,'hackybox',1,0,774,0),"+
+            "(0,'chown',11,0,'hackybox',1,0,774,0),"+
+            "(0,'chmod',11,0,'hackybox',1,0,774,0),"+
+            "(0,'fedit',11,0,'hackybox',1,0,774,0),"+
+            "(0,'netmap',11,0,'hackybox',1,0,774,0),"+
+            "(0,'music',11,0,'hackybox',1,0,774,0),"+
+            "(0,'admin',11,0,'serveradmin',1,0,774,0),"+
+            "(0,'cadmin',11,0,'computeradmin',1,0,774,0),"+
+            "(0,'hash',11,0,'hash',1,0,774,0)",
             "/*!40000 ALTER TABLE `files` ENABLE KEYS */",
 
             "UNLOCK TABLES",

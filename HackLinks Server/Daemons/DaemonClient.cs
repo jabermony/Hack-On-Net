@@ -26,7 +26,7 @@ namespace HackLinks_Server.Daemons
         {
             if (inputData.Equals("daemon exit"))
             {
-                CurrentState = State.Dead;
+                Signal(ProcessSignal.SIGTERM);
                 return;
             }
             base.WriteInput(inputData);

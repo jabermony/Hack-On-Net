@@ -15,8 +15,8 @@ namespace HackLinks_Server.Computers.Processes
         public override void Run(string command)
         {
             base.Run(command);
-            CurrentState = State.Dead;
             exitCode = 1; // non-zero exitcode
+            Signal(ProcessSignal.SIGTERM);
         }
     }
 }

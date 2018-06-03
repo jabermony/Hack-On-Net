@@ -40,7 +40,7 @@ namespace HackLinks_Server.Computers.Processes
         public override void Run(string command)
         {
             exitCode = (byte) (RunCommand(command) ? 0 : 1);
-            CurrentState = State.Dead;
+            Signal(ProcessSignal.SIGTERM);
         }
 
 

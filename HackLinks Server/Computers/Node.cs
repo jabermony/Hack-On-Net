@@ -22,7 +22,7 @@ namespace HackLinks_Server.Computers
 
         public int ownerId;
 
-        public readonly FileSystem fileSystem = new FileSystem(Server.Instance.FileSystemManager);
+        public readonly DiskFileSystem fileSystem = new DiskFileSystem(Server.Instance.FileSystemManager);
 
         public List<Session> sessions = new List<Session>();
         public List<Daemon> daemons = new List<Daemon>();

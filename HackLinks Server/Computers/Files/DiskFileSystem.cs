@@ -10,13 +10,13 @@ namespace HackLinks_Server.Computers.Files
     /// <summary>
     /// Contains Files for a computer
     /// </summary>
-    public class FileSystem
+    public class DiskFileSystem
     {
         public readonly FileSystemManager fileSystemManager;
 
         public File rootFile;
 
-        public FileSystem(FileSystemManager fileSystemManager)
+        public DiskFileSystem(FileSystemManager fileSystemManager)
         {
             this.fileSystemManager = fileSystemManager;
         }

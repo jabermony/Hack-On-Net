@@ -12,16 +12,16 @@ namespace HackLinks_Server.Computers.Files
         public delegate string Read();
         public delegate void Write(string data);
 
-        private Read input;
-        private Write output;
+        private Read output;
+        private Write input;
 
-        public override string Content { get => input(); set => output(value); }
+        public override string Content { get => output(); set => input(value); }
         public override int Checksum => 0;
 
-        public FunctionFile(int id, Node computer, File parent, string name, Read input, Write output) : base(id, computer, parent, name)
+        public FunctionFile(int id, Node computer, File parent, string name, Read output, Write input) : base(id, computer, parent, name)
         {
-            this.input = input;
             this.output = output;
+            this.input = input;
         }
     }
 }

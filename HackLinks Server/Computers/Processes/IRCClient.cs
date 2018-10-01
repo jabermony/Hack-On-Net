@@ -1,8 +1,8 @@
 ﻿using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Processes;
 using HackLinks_Server.Daemons;
-using HackLinks_Server.Daemons.Types;
-using HackLinks_Server.Daemons.Types.Irc;
+using HackLinks_Server.Computers.Processes.Daemons;
+using HackLinks_Server.Computers.Processes.Daemons.Irc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +51,7 @@ namespace HackLinks_Server.Computers.Processes
                     var text = "";
                     for (int i = 1; i < cmdArgs.Length; i++)
                         text += cmdArgs[i] + (i != cmdArgs.Length ? " " : "");
-                    daemon.SendMessage(new IrcMessage(process.computer.GetUsername(process.Credentials.UserId), text));
+                    daemon.SendMessage(new IrcMessage(process.Kernel.GetUsername(process.Credentials.UserId), text));
                     return true;
                 }
                 process.Print("Usage : irc [send]");

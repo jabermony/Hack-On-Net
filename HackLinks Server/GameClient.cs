@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HackLinks_Server.Util;
 using static HackLinksCommon.NetUtil;
+using HackLinks_Server.Daemons;
 
 namespace HackLinks_Server
 {
@@ -50,7 +51,7 @@ namespace HackLinks_Server
         public void ConnectTo(Node node)
         {
             Send(PacketType.KERNL, "connect", "succ", node.ip, "3");
-            Login(node, new Credentials(node.GetUserId("guest"), Group.GUEST));
+            Login(node, new Credentials(node.Kernel.GetUserId("guest"), Group.GUEST));
         }
 
         public void Login(Node node, Credentials credentials)
@@ -76,14 +77,21 @@ namespace HackLinks_Server
         {
             Logger.Debug(type);
             object[] args;
-            if( type == typeof(ServerAdmin))
+            if( type == typeof(ServerAdmin) || type.IsInstanceOfType(typeof(Daemon)) )
             {
                 args = new object[] { node.NextPID, printer, node, credentials, this };
             } else
             {
                 args = new object[] { node.NextPID, printer, node, credentials };
             }
-            return (Process)Activator.CreateInstance(type, args);
+            Process process =  (Process)Activator.CreateInstance(type, args);
+
+            if (type.IsInstanceOfType(typeof(Daemon)))
+            {
+                node.daemons.Add((Daemon)process);
+            }
+
+            return process;
         }
 
         public void Disconnect()

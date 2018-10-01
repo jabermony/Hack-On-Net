@@ -1,7 +1,7 @@
 ﻿using HackLinks_Server.Computers;
-using HackLinks_Server.Computers.Permissions;
-using HackLinks_Server.Computers.Processes;
-using HackLinks_Server.Daemons.Types.Bank;
+using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Computers.Processes.Daemons.Bank;
+using HackLinks_Server.Daemons;
 using HackLinks_Server.Files;
 using HackLinksCommon;
 using System;
@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static HackLinksCommon.NetUtil;
 
-namespace HackLinks_Server.Daemons.Types
+namespace HackLinks_Server.Computers.Processes.Daemons
 {
     class BankDaemon : Daemon
     {
@@ -36,10 +36,10 @@ namespace HackLinks_Server.Daemons.Types
         public void LoadAccounts()
         {
             accounts.Clear();
-            File accountFile = node.fileSystem.rootFile.GetFileAtPath("/bank/accounts.db");
+            File accountFile = Kernel.GetFile(this, "/bank/accounts.db");
             if (accountFile == null)
                 return;
-            foreach (string line in accountFile.Content.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in accountFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var data = line.Split(',');
                 if (data.Length < 4)
@@ -50,7 +50,7 @@ namespace HackLinks_Server.Daemons.Types
 
         public void UpdateAccountDatabase()
         {
-            File accountFile = node.fileSystem.rootFile.GetFileAtPath("/bank/accounts.db");
+            File accountFile = Kernel.GetFile(this, "/bank/accounts.db");
             if (accountFile == null)
                 return;
             string newAccountsFile = "";
@@ -58,18 +58,18 @@ namespace HackLinks_Server.Daemons.Types
             {
                 newAccountsFile += account.accountName + "," + 0 + "," + account.password + "," + account.clientUsername + "\r\n";
             }
-            accountFile.Content = newAccountsFile;
+            accountFile.SetContent(newAccountsFile);
         }
 
         public bool CheckFolders(CommandProcess process)
         {
-            var bankFolder = process.computer.fileSystem.rootFile.GetFile("bank");
-            if (bankFolder == null || !bankFolder.Type.Equals(File.FileType.Directory))
+            var bankFolder = Kernel.GetFile(process, "/bank");
+            if (bankFolder == null || !bankFolder.Type.Equals(FileType.Directory))
             {
                 process.Print("No bank daemon folder was found ! (Contact the admin of this node to create one as the bank is useless without one)");
                 return false;
             }
-            var accountFile = bankFolder.GetFile("accounts.db");
+            var accountFile = Kernel.GetFile(process, "/bank/accounts.db");
             if (accountFile == null)
             {
                 process.Print("No accounts file was found ! (Contact the admin of this node to create one as the bank is useless without one)");
@@ -91,22 +91,21 @@ namespace HackLinks_Server.Daemons.Types
             }
             account.balance += amount;
             UpdateAccountDatabase();
-            var bankFolder = computer.fileSystem.rootFile.GetFile("bank");
             LogTransaction($"{to.accountName},Received {amount} from {from.accountName}@{ip} to {to.accountName}", session.sessionId, session.owner.homeComputer.ip);
         }
 
         public void LogTransaction(string transactionMessage, int sessionId, string ip)
         {
-            var bankFolder = computer.fileSystem.rootFile.GetFile("bank");
-            File transactionLog = bankFolder.GetFile("transactionlog.db");
+            File transactionLog = Kernel.GetFile(this, "/bank/transactionlog.db");
             if (transactionLog != null)
             {
-                if (transactionLog.Content == "")
-                    transactionLog.Content = transactionLog.Content.Insert(0, transactionMessage);
+                if (transactionLog.GetContent() == "")
+                    transactionLog.SetContent(transactionLog.GetContent().Insert(0, transactionMessage));
                 else
-                    transactionLog.Content = transactionLog.Content.Insert(0, transactionMessage + "\r\n");
+                    transactionLog.SetContent(transactionLog.GetContent().Insert(0, transactionMessage + "\r\n"));
             }
-            node.Log(Log.LogEvents.BankTransaction, transactionMessage, sessionId, ip);
+            // TODO logging
+            //node.Log(Log.LogEvents.BankTransaction, transactionMessage, sessionId, ip);
         }
 
         public override void OnStartUp()

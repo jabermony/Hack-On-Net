@@ -1,14 +1,11 @@
-﻿using HackLinks_Server.Computers;
-using HackLinks_Server.Computers.Processes;
+﻿using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Daemons;
 using HackLinks_Server.Daemons.Types.Http;
 using HackLinks_Server.Files;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace HackLinks_Server.Daemons.Types
+namespace HackLinks_Server.Computers.Processes.Daemons
 {
     class HTTPDaemon : Daemon
     {
@@ -65,11 +62,14 @@ namespace HackLinks_Server.Daemons.Types
 
         public void LoadWebPages()
         {
-            File www = node.fileSystem.rootFile.GetFile("www");
-            if (www == null || !www.Type.Equals(File.FileType.Directory))
+            File www = node.Kernel.GetFile(this, "/www");
+            if (www == null || !www.Type.Equals(FileType.Directory))
                 return;
-            foreach(File file in www.children)
+            foreach(File file in www.GetChildren())
             {
+                string content = file.GetContent();
+                if (content == null)
+                    continue;
                 WebPage newPage = WebPage.ParseFromFile(file);
                 if (newPage == null)
                     return;

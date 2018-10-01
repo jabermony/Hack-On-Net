@@ -11,20 +11,26 @@ namespace HackLinks_Server.Computers.Processes
     {
         public int UserId { get; private set; }
         public Group Group { get; private set; }
-        public List<Group> Groups { get; private set; }
+        public Group[] Groups { get; private set; }
 
         public Credentials(int userId, Group group)
         {
             UserId = userId;
             Group = group;
-            Groups = new List<Group>();
+            Groups = new Group[0];
         }
 
-        public Credentials(int userId, Group group, List<Group> groups)
+        public Credentials(int userId, Group group, Group[] groups)
         {
             UserId = userId;
             Group = group;
-            Groups = groups;
+            Groups = groups.ToArray();
+        }
+
+        public Credentials(int userId, Group group, List<Group> groups) 
+            : this(userId, group, groups.ToArray())
+        {
+           
         }
     }
 }

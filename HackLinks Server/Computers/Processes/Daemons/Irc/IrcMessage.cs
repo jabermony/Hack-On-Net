@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackLinks_Server.Daemons.Types.Irc
+namespace HackLinks_Server.Computers.Processes.Daemons.Irc
 {
     class IrcMessage
     {

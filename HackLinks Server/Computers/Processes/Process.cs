@@ -71,14 +71,15 @@ namespace HackLinks_Server.Computers.Processes
         }
 
         public readonly int ProcessId;
-        public Node computer;
+        public Kernel Kernel { get; }
+        private Node node;
 
         public File ActiveDirectory { get; set; }
         
         public Credentials Credentials { get; }
 
         private State currentState;
-        public State CurrentState { get => currentState; private set { computer.NotifyProcessStateChange(ProcessId, value); currentState = value; } }
+        public State CurrentState { get => currentState; private set { node.NotifyProcessStateChange(ProcessId, value); currentState = value; } }
 
         protected byte exitCode = 0;
         public byte ExitCode => exitCode;
@@ -87,17 +88,17 @@ namespace HackLinks_Server.Computers.Processes
 
         public Printer Print => printer;
 
-        public Process(int pid, Printer printer, Node computer, Credentials credentials)
+        public Process(int pid, Printer printer, Node node, Credentials credentials)
         {
             ProcessId = pid;
             this.printer = printer ?? delegate { };
-            this.computer = computer;
-            ActiveDirectory = computer.fileSystem.rootFile;
+            this.Kernel = node.Kernel;
+            ActiveDirectory = Kernel.GetFile(this, "/");
             Credentials = credentials;
 
-            CurrentState = State.New;
-
-            computer.RegisterProcess(this);
+            currentState = State.New;
+            this.node = node;
+            node.RegisterProcess(this);
         }
 
         /// <summary>
@@ -107,7 +108,7 @@ namespace HackLinks_Server.Computers.Processes
         /// <param name="process"></param>
         public virtual void NotifyDeadChild(Process process)
         {
-            computer.Kernel.ReattachParent(this, process);
+            Kernel.ReattachParent(this, process);
         }
 
         /// <summary>

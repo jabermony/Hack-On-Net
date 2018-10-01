@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HackLinks_Server.Daemons.Types.Irc;
+using HackLinks_Server.Computers.Processes.Daemons.Irc;
 using static HackLinksCommon.NetUtil;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Processes;
+using HackLinks_Server.Daemons;
 
-namespace HackLinks_Server.Daemons.Types
+namespace HackLinks_Server.Computers.Processes.Daemons
 {
     internal class IrcDaemon : Daemon
     {

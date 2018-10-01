@@ -1,7 +1,8 @@
 ﻿using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Processes;
-using HackLinks_Server.Daemons.Types.Dns;
+using HackLinks_Server.Computers.Processes.Daemons.Dns;
+using HackLinks_Server.Daemons;
 using HackLinks_Server.Files;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static HackLinksCommon.NetUtil;
 
-namespace HackLinks_Server.Daemons.Types
+namespace HackLinks_Server.Computers.Processes.Daemons
 {
     class DNSDaemon : Daemon
     {
@@ -56,10 +57,10 @@ namespace HackLinks_Server.Daemons.Types
         public void LoadEntries()
         {
             this.entries.Clear();
-            File entryFile = node.fileSystem.rootFile.GetFileAtPath(DEFAULT_CONFIG_PATH);
+            File entryFile = Kernel.GetFile(this, DEFAULT_CONFIG_PATH);
             if (entryFile == null)
                 return;
-            foreach (string line in entryFile.Content.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in entryFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var data = line.Split(new char[] { ':', '=' });
                 if (data.Length < 2)

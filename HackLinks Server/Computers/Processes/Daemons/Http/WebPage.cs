@@ -29,8 +29,8 @@ namespace HackLinks_Server.Daemons.Types.Http
         {
             WebPage page = new WebPage();
             page.title = file.Name;
-            page.content = file.Content;
-            MatchCollection matches = Regex.Matches(file.Content, "(<!interface.*>.*<\\/interface>)",RegexOptions.Multiline);
+            page.content = file.GetContent();
+            MatchCollection matches = Regex.Matches(file.GetContent(), "(<!interface.*>.*<\\/interface>)",RegexOptions.Multiline);
             foreach(Match match in matches)
             {
                 var newInterface = WebInterface.ParseFromTag(match.Value, file);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using HackLinks_Server.Computers.Filesystems;
 using HackLinks_Server.Computers.Processes;
 using HackLinks_Server.Util;
 
@@ -26,24 +27,27 @@ namespace HackLinks_Server.Computers.Permissions
             return group;
         }
 
-        internal static bool ApplyModifiers(string modifer, FilePermissions permissions)
+        public static bool ApplyModifiers(string modifer, int permissionValue, out int outValue)
         {
-
+            // We've set it to an entirely new value if this matches
             if (Regex.IsMatch(modifer, "^[0-7]{1,3}$"))
             {
-                permissions.PermissionValue = int.Parse(modifer);
+                // file mode is specified in octal
+                outValue = Convert.ToInt32(modifer, 8);
                 return true;
             }
 
             Match match = Regex.Match(modifer, "^([augo]*)([+=-][rwx]*)+$");
             if(match.Success && match.Groups.Count >= 2)
             {
+                // Initialize our new value to the current permission value
+                int newValue = permissionValue;
 
                 string permissionTypeChars = match.Groups[1].Captures[0].Value;
 
-                HashSet<FilePermissions.PermissionType> permissionTypes = new HashSet<FilePermissions.PermissionType>();
+                HashSet<PermissionType> permissionTypes = new HashSet<PermissionType>();
 
-                int lengthOfTypes = Enum.GetValues(typeof(FilePermissions.PermissionType)).Length;
+                int lengthOfTypes = Enum.GetValues(typeof(PermissionType)).Length;
 
                 if(permissionTypeChars.Length > 0)
                 {
@@ -56,58 +60,90 @@ namespace HackLinks_Server.Computers.Permissions
                         switch (permissionTypeChar)
                         {
                             case 'u':
-                                permissionTypes.Add(FilePermissions.PermissionType.User);
+                                permissionTypes.Add(PermissionType.User);
                                 continue;
                             case 'g':
-                                permissionTypes.Add(FilePermissions.PermissionType.Group);
+                                permissionTypes.Add(PermissionType.Group);
                                 continue;
                             case 'o':
-                                permissionTypes.Add(FilePermissions.PermissionType.Others);
+                                permissionTypes.Add(PermissionType.Others);
                                 continue;
                             case 'a':
-                                permissionTypes.UnionWith(Enum.GetValues(typeof(FilePermissions.PermissionType)).OfType<FilePermissions.PermissionType>());
+                                permissionTypes.Add(PermissionType.All);
                                 continue;
                             default:
-                                return false;
+                                throw new InvalidOperationException($"Invalid permission Type '{permissionTypeChar}'");
                         }
                     }
                 }
                 else
                 {
                     //No type specified, default to all types
-                    permissionTypes.UnionWith(Enum.GetValues(typeof(FilePermissions.PermissionType)).OfType<FilePermissions.PermissionType>());
+                    permissionTypes.Add(PermissionType.All);
                 }
-
 
                 foreach(Capture permissionCapture in match.Groups[2].Captures)
                 {
                     string permission = permissionCapture.Value;
                     Logger.Debug($"permission {permission}");
-                    foreach (FilePermissions.PermissionType type in permissionTypes)
+
+                    Permission newPermission = 0;
+                    if (permission.Contains('r'))
+                        newPermission |= Permission.A_Read;
+                    if (permission.Contains('w'))
+                        newPermission |= Permission.A_Write;
+                    if (permission.Contains('x'))
+                        newPermission |= Permission.A_Execute;
+
+                    foreach (PermissionType type in permissionTypes)
                     {
-                        int permissionDigit = FilePermissions.CalculatePermissionDigit(permission.Contains('r'), permission.Contains('w'), permission.Contains('x'));
-                        switch(permission[0])
+                        switch (permission[0])
                         {
-                            case '+':
-                                permissionDigit = permissions.GetPermissionDigit(type) | permissionDigit;
-                                break;
                             case '=':
+                                // we clear the given permission type first
+                                newValue &= ~(int)type;
+                                // we then add the new permissions
+                                goto case '+';
+                            case '+':
+                                // apply our digit to the given type
+                                newValue |= ((int)newPermission & (int)type);
                                 break;
                             case '-':
-                                permissionDigit = permissions.GetPermissionDigit(type) & ~permissionDigit;
+                                newValue &= ~(int)newPermission;
                                 break;
                             // Logically there will never be anything but a '+', '=', or '-' here, so default throws exceptions in case of future bugs.
                             default:
                                 throw new InvalidOperationException($"Invalid permission Modifier '{permission[0]}'");
-
                         }
-                        permissions.SetPermission(type, permissionDigit);
                     }
                 }
+
+                outValue = newValue;
                 return true;
             }
 
+            outValue = permissionValue;
             return false;
+        }
+
+        /// <summary>
+        /// <para>Check if the file has permission for the given operations for the given type.</para>
+        /// </summary>
+        /// <param name="value">The permission as a digit calculated from <see cref="Permission"/>. To calculate the value do a bitwise OR for the value of the required.</param>
+        /// <returns>True if the type would have permission to perform the operation, false otherwise</returns>
+        public static bool CheckPermission(Permission value, int permissionValue, int fileOwnerId, Group fileGroup, int userId, params Group[] privs)
+        {
+            if (fileOwnerId != userId)
+            {
+                permissionValue &= ~(int)Permission.O_All;
+            }
+
+            if (!privs.Contains(fileGroup))
+            {
+                permissionValue &= ~(int)Permission.G_All;
+            }
+
+            return (int)value == (permissionValue & (int)value);
         }
 
         public static bool CheckCredentials(Credentials credentials, int UserId, Group targetGroup)
@@ -132,56 +168,60 @@ namespace HackLinks_Server.Computers.Permissions
             return false;
         }
 
-        public static string PermissionToDisplayString(FilePermissions permissions)
+        public static string PermissionToDisplayString(int permissionValue)
         {
             StringBuilder output = new StringBuilder();
-
-            if(permissions.Owner != (int) FilePermissions.Permission.None)
+            if((permissionValue & (int) PermissionType.User) != 0)
             {
                 if(output.Length > 0)
                 {
                     output.Append(", ");
                 }
                 output.Append("U=");
-                if ((permissions.Owner & (int)FilePermissions.Permission.Read) == (int)FilePermissions.Permission.Read) output.Append('R');
+                if (CheckValue(permissionValue, Permission.U_Read)) output.Append('R');
                 else output.Append('-');
-                if ((permissions.Owner & (int) FilePermissions.Permission.Write) == (int) FilePermissions.Permission.Write) output.Append('W');
+                if (CheckValue(permissionValue, Permission.U_Write)) output.Append('W');
                 else output.Append('-');
-                if ((permissions.Owner & (int) FilePermissions.Permission.Execute) == (int) FilePermissions.Permission.Execute) output.Append('X');
+                if (CheckValue(permissionValue, Permission.U_Execute)) output.Append('X');
                 else output.Append('-');
             }
 
-            if (permissions.Group != (int)FilePermissions.Permission.None)
+            if ((permissionValue & (int)PermissionType.Group) != 0)
             {
                 if (output.Length > 0)
                 {
                     output.Append(", ");
                 }
                 output.Append("G=");
-                if ((permissions.Group & (int)FilePermissions.Permission.Read) == (int)FilePermissions.Permission.Read) output.Append('R');
+                if (CheckValue(permissionValue, Permission.G_Read)) output.Append('R');
                 else output.Append('-');
-                if ((permissions.Group & (int)FilePermissions.Permission.Write) == (int)FilePermissions.Permission.Write) output.Append('W');
+                if (CheckValue(permissionValue, Permission.G_Write)) output.Append('W');
                 else output.Append('-');
-                if ((permissions.Group & (int)FilePermissions.Permission.Execute) == (int)FilePermissions.Permission.Execute) output.Append('X');
+                if (CheckValue(permissionValue, Permission.G_Execute)) output.Append('X');
                 else output.Append('-');
             }
 
-            if (permissions.Others != (int)FilePermissions.Permission.None)
+            if ((permissionValue & (int)PermissionType.Others) != 0)
             {
                 if (output.Length > 0)
                 {
                     output.Append(", ");
                 }
                 output.Append("O=");
-                if ((permissions.Others & (int)FilePermissions.Permission.Read) == (int)FilePermissions.Permission.Read) output.Append('R');
+                if (CheckValue(permissionValue, Permission.O_Read)) output.Append('R');
                 else output.Append('-');
-                if ((permissions.Others & (int)FilePermissions.Permission.Write) == (int)FilePermissions.Permission.Write) output.Append('W');
+                if (CheckValue(permissionValue, Permission.O_Write)) output.Append('W');
                 else output.Append('-');
-                if ((permissions.Others & (int)FilePermissions.Permission.Execute) == (int)FilePermissions.Permission.Execute) output.Append('X');
+                if (CheckValue(permissionValue, Permission.O_Execute)) output.Append('X');
                 else output.Append('-');
             }
 
             return output.ToString();
+        }
+
+        private static bool CheckValue(int value, Permission permission)
+        {
+            return ((value & (int)permission) == (int)permission);
         }
     }
 }

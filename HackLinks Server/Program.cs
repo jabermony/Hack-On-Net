@@ -17,7 +17,6 @@ namespace HackLinks_Server
     {
 
         public static bool recieving = false;
-        private static long previousUploadTime = 0;
 
         static void Main(string[] args)
         {
@@ -163,12 +162,6 @@ namespace HackLinks_Server
                     double dT = stopWatch.ElapsedMilliseconds / (double)1000;
                     stopWatch.Restart();
                     Server.Instance.MainLoop(dT);
-
-                    if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - previousUploadTime > configData.SaveFrequency)
-                    {
-                        previousUploadTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                        Server.Instance.SaveDatabase();
-                    }
                 }
 
             }

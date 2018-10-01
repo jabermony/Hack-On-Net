@@ -1,9 +1,10 @@
 ﻿using HackLinks_Server.Computers;
+using HackLinks_Server.Computers.Filesystems;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Processes;
 using HackLinks_Server.Daemons;
-using HackLinks_Server.Daemons.Types;
-using HackLinks_Server.Daemons.Types.Dns;
+using HackLinks_Server.Computers.Processes.Daemons;
+using HackLinks_Server.Computers.Processes.Daemons.Dns;
 using HackLinks_Server.Files;
 using System;
 using System.Collections.Generic;
@@ -81,33 +82,25 @@ namespace HackLinks_Server.Computers.Processes
                         process.Print("Missing arguments.\nProper usage: dns assign [IP] [URL]");
                         return true;
                     }
-                    File dnsFolder = process.computer.fileSystem.rootFile.GetFile("dns");
+                    File dnsFolder = process.Kernel.GetFile(process, "/dns");
                     if (dnsFolder == null)
                     {
-                        dnsFolder = process.computer.fileSystem.CreateFile(daemon.computer, process.computer.fileSystem.rootFile, "dns");
-                        dnsFolder.OwnerId = 0; // root
-                        dnsFolder.Type = File.FileType.Directory;
+                        dnsFolder = process.Kernel.CreateFile(process, process.Kernel.GetFile(process, "/"), "dns", Permission.A_All & ~Permission.O_All, 0, process.Credentials.Group, FileType.Directory);
                     }
                     else
                     {
-                        if (!dnsFolder.Type.Equals(File.FileType.Directory))
+                        if (!dnsFolder.Type.Equals(FileType.Directory))
                             return true;
                     }
                     File dnsEntries = dnsFolder.GetFile("entries.db");
                     if (dnsEntries == null)
                     {
-                        dnsEntries = process.computer.fileSystem.CreateFile(process.computer, dnsFolder, "entries.db");
-                        dnsEntries.OwnerId = 0; // root
-                        dnsEntries.Permissions.SetPermission(FilePermissions.PermissionType.Group, true, true, true);
-                        dnsEntries.Group = Group.ADMIN;
+                        dnsEntries = process.Kernel.CreateFile(process, dnsFolder, "entries.db", Permission.A_All & ~Permission.O_All, 0, Group.ADMIN);
                     }
-                    else if (dnsEntries.Type.Equals(File.FileType.Directory))
+                    else if (dnsEntries.Type.Equals(FileType.Directory))
                     {
-                        dnsEntries.RemoveFile();
-                        dnsEntries = process.computer.fileSystem.CreateFile(process.computer, dnsFolder, "entries.db");
-                        dnsEntries.OwnerId = 0; // root
-                        dnsEntries.Permissions.SetPermission(FilePermissions.PermissionType.Group, true, true, true);
-                        dnsEntries.Group = Group.ADMIN;
+                        process.Kernel.UnlinkFile(process, dnsEntries.FileHandle);
+                        dnsEntries = process.Kernel.CreateFile(process, dnsFolder, "entries.db", Permission.A_All & ~Permission.O_All, 0, Group.ADMIN);
                     }
                     foreach (DNSEntry entry in daemon.entries)
                     {
@@ -117,7 +110,7 @@ namespace HackLinks_Server.Computers.Processes
                             return true;
                         }
                     }
-                    dnsEntries.Content += '\n' + cmdArgs[1] + '=' + cmdArgs[2];
+                    dnsEntries.SetContent(dnsEntries.GetContent() + '\n' + cmdArgs[1] + '=' + cmdArgs[2]);
                     daemon.LoadEntries();
                     process.Print("Content appended.");
                     return true;

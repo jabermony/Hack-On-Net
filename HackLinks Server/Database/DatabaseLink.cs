@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HackLinks_Server.Util;
+using HackLinks_Server.Computers.Filesystems;
+using System.Data;
 
 namespace HackLinks_Server.Database
 {
@@ -26,6 +28,160 @@ namespace HackLinks_Server.Database
             connectionStringBuilder.Database = config.Database;
             connectionStringBuilder.UserID = config.UserID;
             connectionStringBuilder.Password = config.Password;
+        }
+
+        public void SetFileLength(int computerId, ulong filesystemId, ulong inode, long newLength)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();                
+                MySqlCommand fileCommand = new MySqlCommand("UPDATE files SET content = RPAD(SUBSTRING(content, @position, @count), @count, CHAR(0)) WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                fileCommand.Parameters.AddRange(
+                    new MySqlParameter[]{
+                        new MySqlParameter("position", 0),
+                        new MySqlParameter("count", newLength),
+                        new MySqlParameter("computer_Id", computerId),
+                        new MySqlParameter("filesystem_id", filesystemId),
+                        new MySqlParameter("inode", inode)
+                    }
+                );
+                fileCommand.ExecuteNonQuery();
+                // TODO check for failure ?
+            }
+        }
+
+        public void CreateFile(int computerId, ulong filesystemId, ulong inode, int linkCount, int mode, int groupId, int ownerId, byte[] content)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand fileCommand = new MySqlCommand(
+                "INSERT INTO files (computer_Id, filesystem_id, inode, link_count, mode, group_id, user_id, content) " +
+                "VALUES (@computer_id, @filesystem_id, @inode, @link_count, @mode, @group_id, @user_id, @content) "
+                , conn);
+                fileCommand.Parameters.AddRange(
+                    new MySqlParameter[]{
+                        new MySqlParameter("computer_Id", computerId),
+                        new MySqlParameter("filesystem_id", filesystemId),
+                        new MySqlParameter("inode", inode),
+                        new MySqlParameter("link_count", linkCount),
+                        new MySqlParameter("mode", mode),
+                        new MySqlParameter("group_id", groupId),
+                        new MySqlParameter("user_id", ownerId),
+                        new MySqlParameter("content", content)
+                    }
+                );
+                fileCommand.ExecuteNonQuery();
+                // TODO check for failure ?
+            }
+        }
+        
+
+        /// <summary>
+        /// Write buffer bytes to the given file.
+        /// </summary>
+        /// <param name="computerId"></param>
+        /// <param name="filesystemId"></param>
+        /// <param name="inode"></param>
+        /// <param name="buffer"></param>
+        /// <param name="position">the position within the file to begin writing from</param>
+        /// <returns>Number of bytes read</returns>
+        public void WriteFile(int computerId, ulong filesystemId, ulong inode, byte[] buffer, long position)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand fileCommand = new MySqlCommand("UPDATE files SET content = INSERT(RPAD(content, @minLen, CHAR(0)), @position, @count, @buffer) WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                fileCommand.Parameters.AddRange(
+                    new MySqlParameter[]{
+                        new MySqlParameter("position", position + 1),
+                        new MySqlParameter("count", buffer.Length),
+                        new MySqlParameter("computer_Id", computerId),
+                        new MySqlParameter("filesystem_id", filesystemId),
+                        new MySqlParameter("inode", inode),
+                        new MySqlParameter("buffer", buffer),
+                        new MySqlParameter("minLen", position + buffer.Length)
+                    }
+                );
+                var b = fileCommand.ExecuteNonQuery();
+                // TODO check for failure ?
+            }
+        }
+
+        /// <summary>
+        /// Read a stream of bytes from the given file into the provided array buffer.
+        /// </summary>
+        /// <param name="computerId"></param>
+        /// <param name="filesystemId"></param>
+        /// <param name="inode"></param>
+        /// <param name="buffer"></param>
+        /// <param name="offset">offset within the array to begin reading to</param>
+        /// <param name="position">the position within the file to begin reading from</param>
+        /// <param name="count">the maximum number of bytes to read</param>
+        /// <returns>Number of bytes read</returns>
+        public long ReadFile(int computerId, ulong filesystemId, ulong inode, byte[] buffer, int offset, long position, int count)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand fileCommand = new MySqlCommand("SELECT SUBSTRING(content, @position, @count) FROM files WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                fileCommand.Parameters.AddRange(
+                    new MySqlParameter[]{
+                        new MySqlParameter("position", position + 1),
+                        new MySqlParameter("count", count),
+                        new MySqlParameter("computer_Id", computerId),
+                        new MySqlParameter("filesystem_id", filesystemId),
+                        new MySqlParameter("inode", inode)
+                    }
+                );
+                using (MySqlDataReader fileReader = fileCommand.ExecuteReader())
+                {
+                    if(fileReader.HasRows)
+                    {
+                        fileReader.Read();
+                        return fileReader.GetBytes(0, 0, buffer, offset, count);
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Read a stream of bytes from the given file into the provided array buffer.
+        /// </summary>
+        /// <param name="computerId"></param>
+        /// <param name="filesystemId"></param>
+        /// <param name="inode"></param>
+        /// <returns>Number of bytes in file</returns>
+        public long GetFileLength(int computerId, ulong filesystemId, ulong inode)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand fileCommand = new MySqlCommand("SELECT LENGTH(content) FROM files WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                fileCommand.Parameters.AddRange(
+                    new MySqlParameter[]{
+                        new MySqlParameter("computer_Id", computerId),
+                        new MySqlParameter("filesystem_id", filesystemId),
+                        new MySqlParameter("inode", inode)
+                    }
+                );
+                using (MySqlDataReader fileReader = fileCommand.ExecuteReader())
+                {
+                    if (fileReader.HasRows)
+                    {
+                        fileReader.Read();
+                        if(!fileReader.IsDBNull(0))
+                        {
+                            return fileReader.GetInt64(0);
+                        }
+                    }
+                    return 0;
+                }
+            }
         }
 
         public string GetConnectionString()
@@ -58,9 +214,13 @@ namespace HackLinks_Server.Database
                                     ownerId = reader.GetInt32(2)
                                 };
 
-                                MySqlCommand fileCommand = new MySqlCommand("SELECT id, name, parentFile, type, content, owner, groupId, permissions FROM files WHERE computerId = @0", cn1);
-                                fileCommand.Parameters.Add(new MySqlParameter("0", newNode.id));
-                                List<File> computerFiles = new List<File>();
+                                Logger.Info($"Creating Node {newNode.id} with ip {newNode.ip}");
+
+                                MySqlCommand fileCommand = new MySqlCommand("SELECT computer_id, filesystem_id, inode, link_count, mode, group_id, user_id, inode_change_time, last_modified_time, last_accessed_time, content FROM files WHERE computer_Id = @computer_Id AND filesystem_id = 0", cn1);
+                                fileCommand.Parameters.Add(new MySqlParameter("computer_Id", newNode.id));
+                                List<DiskInode> computerInodes = new List<DiskInode>();
+
+                                DiskFileSystem fileSystem = new DiskFileSystem(newNode.id, 0);
 
                                 using (MySqlDataReader fileReader = fileCommand.ExecuteReader())
                                 {
@@ -68,32 +228,23 @@ namespace HackLinks_Server.Database
                                     {
                                         while (fileReader.Read())
                                         {
-                                            int fileId = fileReader.GetInt32(0);
-                                            string fileName = fileReader.GetString(1);
+                                            ulong fileId = fileReader.GetUInt64("inode");
+                                            int mode = fileReader.GetInt32("mode");
+                                            Logger.Info($"Creating {(FileType)(mode >> 9 & 0b111)} with id {fileId}");
 
-                                            Logger.Info($"Creating file {fileName} with id {fileReader.GetInt32(0)}");
-
-                                            File newFile = newNode.fileSystem.CreateFile(fileId, newNode, newNode.fileSystem.rootFile, fileName);
-
-                                            newFile.ParentId = fileReader.GetInt32(2);
-                                            newFile.Type = (File.FileType)fileReader.GetInt32(3);
-                                            newFile.Content = fileReader.GetString(4);
-                                            newFile.Group = (Group)fileReader.GetInt32(5);
-                                            newFile.OwnerId = fileReader.GetInt32(6);
-                                            newFile.Permissions.PermissionValue = fileReader.GetInt32(7);
-
-                                            computerFiles.Add(newFile);
-
-                                            if (newFile.ParentId == 0)
+                                            DiskInode newFile = new DiskInode(fileSystem, fileId, fileReader.GetInt32("mode"))
                                             {
-                                                newNode.SetRoot(newFile);
-                                            }
+                                                Group = (Group)fileReader.GetInt32("group_id"),
+                                                OwnerId = fileReader.GetInt32("user_id")
+                                            };
+
+                                            computerInodes.Add(newFile);
                                         }
                                     }
                                 }
-
-                                ComputerManager.FixFolder(computerFiles, newNode.fileSystem.rootFile);
-                                newNode.ParseLogs();
+                                fileSystem.RegisterNewFiles(computerInodes);
+                                newNode.Filesystems[fileSystem.ID] = fileSystem;
+                                //newNode.ParseLogs();
                                 nodeList.Add(newNode);
                             }
                         }
@@ -110,7 +261,7 @@ namespace HackLinks_Server.Database
                 {
                     while (reader.Read())
                     {
-                        Server.Instance.GetCompileManager().AddType(reader.GetInt32("checksum"), reader.GetString("type"));
+                        Server.Instance.GetCompileManager().AddType(reader.GetUInt32("checksum"), reader.GetString("type"));
                     }
                 }
             }
@@ -412,6 +563,80 @@ namespace HackLinks_Server.Database
             }
         }
 
+        public void LinkFile(int computerId, FileHandle fileHandle)
+        {
+            LinkFile(computerId, fileHandle.FilesystemId, fileHandle.Inode);
+        }
+
+        /// <summary>
+        /// Increment the given file's link count. The actual directory modification should be done externally in the filesystem.
+        /// </summary>
+        /// <param name="computerId"></param>
+        /// <param name=""></param>
+        /// <param name="inodeID"></param>
+        public void LinkFile(int computerId, ulong FilesystemId, ulong inodeID)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand incrementCommand = new MySqlCommand(
+                "UPDATE files " +
+                "SET link_count = link_count + 1 " +
+                "WHERE computer_id = @computer_id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                incrementCommand.Parameters.AddRange(new MySqlParameter[] {
+                    new MySqlParameter("computer_id", computerId),
+                    new MySqlParameter("filesystem_id", FilesystemId),
+                    new MySqlParameter("inode", inodeID),
+                 });
+
+                incrementCommand.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
+        /// Update the parent content.
+        /// Decrement the file's link count and remove it from the db if it's zero.
+        /// <b>IMPORTANT the parent files content must be manually altered to account for this</b>
+        /// </summary>
+        /// <param name="parentlisting"></param>
+        /// <param name="parent"></param>
+        /// <param name="fileHandle"></param>
+        public void UnlinkFile(int computerId, FileHandle parent, FileHandle fileHandle)
+        {
+            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
+            {
+                conn.Open();
+                MySqlCommand decrementCommand = new MySqlCommand(
+                "UPDATE files " +
+                "SET link_count = link_count - 1 " +
+                "WHERE computer_id = @computer_id AND filesystem_id = @filesystem_id AND inode = @inode AND link_count > 0", conn);
+
+                decrementCommand.Parameters.AddRange(new MySqlParameter[] {
+                    new MySqlParameter("computer_id", computerId),
+                    new MySqlParameter("filesystem_id", fileHandle.FilesystemId),
+                    new MySqlParameter("inode", fileHandle.Inode),
+                 });
+
+                decrementCommand.ExecuteNonQuery();
+
+                // This intentionally does nothing if the file still has links to it.
+                MySqlCommand deleteCommand = new MySqlCommand(
+                    "DELETE FROM files" +
+                    " WHERE" +
+                    " computer_id = @computer_id AND filesystem_id = @filesystem_id AND inode = @inode AND link_count <= 0"
+                , conn);
+
+                deleteCommand.Parameters.AddRange(new MySqlParameter[] {
+                    new MySqlParameter("computer_id", computerId),
+                    new MySqlParameter("filesystem_id", fileHandle.FilesystemId),
+                    new MySqlParameter("inode", fileHandle.Inode),
+                 });
+
+                deleteCommand.ExecuteNonQuery();
+            }
+
+        }
+
         public static IEnumerable<T> Traverse<T>(IEnumerable<T> items,
         Func<T, IEnumerable<T>> childSelector)
         {
@@ -423,51 +648,6 @@ namespace HackLinks_Server.Database
                 foreach (var child in childSelector(next))
                     stack.Push(child);
             }
-        }
-
-        public void UploadDatabase(List<Node> nodeList, List<File> toDelete)
-        {
-            Logger.Info("Uploading Database");
-
-            using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
-            {
-                conn.Open();
-
-                foreach (Node node in nodeList)
-                {
-                    foreach (File child in Traverse(node.fileSystem.rootFile.children, file => file.children))
-                    {
-                        if (!child.Dirty) // Our child is clean. Continue to the next
-                        {
-                            continue;
-                        }
-
-                        if (UpdateDbFile(child, conn))
-                        {
-                            Logger.Info($"    Updated {child.Name}");
-                        }
-
-                        child.Dirty = false;
-                    }
-                }
-
-                //We iterate our list backwards to avoid our indices being clobbered by removals.
-                for (int i = toDelete.Count - 1; i >= 0; i--)
-                {
-                    File file = toDelete[i];
-                    if (DeleteDbFile(file, conn))
-                    {
-                        Logger.Info($"    Deleted {file.Name}");
-                        toDelete.Remove(file);
-                    }
-                    else
-                    {
-                        Logger.Error($"    Can't Delete {file.Name} ID {file.id}");
-                    }
-                } 
-            }
-
-            Logger.Info("Finished Uploading Database");
         }
 
         public void RebuildDatabase()
@@ -488,54 +668,46 @@ namespace HackLinks_Server.Database
             Logger.Info("Finished Rebuilding Database");
         }
 
-        private bool UpdateDbFile(File child, MySqlConnection conn)
-        {
-            MySqlCommand fileCommand = new MySqlCommand(
-                "INSERT INTO files" +
-                " (id, name, parentFile, type, content, computerId, owner, groupId, permissions)" +
-                " VALUES" +
-                " (@id, @name, @parentFile, @type, @content, @computerId, @owner, @groupId, @permissions)" +
-                " ON DUPLICATE KEY UPDATE" +
-                " name = @name," +
-                " parentFile = @parentFile," +
-                " type = @type," +
-                " content = @content," +
-                " groupId = @groupId," +
-                " permissions = @permissions," +
-                " owner = @owner"
-                , conn);
-            fileCommand.Parameters.AddRange(new MySqlParameter[] {
-                        new MySqlParameter("id", child.id),
-                        new MySqlParameter("name", child.Name),
-                        new MySqlParameter("parentFile", child.ParentId),
-                        new MySqlParameter("type", child.Type),
-                        new MySqlParameter("content", child.Content),
-                        new MySqlParameter("computerId", child.computerId),
-                        new MySqlParameter("groupId", child.Group),
-                        new MySqlParameter("permissions", child.Permissions.PermissionValue),
-                        new MySqlParameter("owner", child.OwnerId),
-                    });
+        private bool UpdateDbFile(DiskInode child, MySqlConnection conn)
+            {
+                //    MySqlCommand fileCommand = new MySqlCommand(
+                //        "INSERT INTO files" +
+                //        " (computer_id, filesystem_id, inode, link_count, mode, group_id, user_id, inode_change_time, last_modified_time, last_accessed_time, content)" +
+                //        " VALUES" +
+                //        " (@id, @name, @parentFile, @type, @content, @computerId, @owner, @groupId, @permissions)" +
+                //        " ON DUPLICATE KEY UPDATE" +
+                //        " computer_id = @computer_id," +
+                //        " filesystem_id = @filesystem_id," +
+                //        " inode = @inode," +
+                //        " link_count = @link_count," +
+                //        " mode = @mode," +
+                //        " group_id = @group_id," +
+                //        " user_id = @user_id," +
+                //        " inode_change_time = @inode_change_time," +
+                //        " last_modified_time = @last_modified_time," +
+                //        " last_accessed_time = @last_accessed_time," +
+                //        " content = @content"
+                //        , conn);
+                //    fileCommand.Parameters.AddRange(new MySqlParameter[] {
+                //                new MySqlParameter("computer_id", child.ID),
+                //                new MySqlParameter("filesystem_id", child.ID),
+                //                new MySqlParameter("inode", child.ID),
+                //                new MySqlParameter("link_count", child.ID),
+                //                new MySqlParameter("mode", child.ID),
+                //                new MySqlParameter("group_id", child.ID),
+                //                new MySqlParameter("user_id", child.ID),
+                //                new MySqlParameter("inode_change_time", child.ID),
+                //                new MySqlParameter("last_modified_time", child.ID),
+                //                new MySqlParameter("last_accessed_time", child.ID),
+                //                new MySqlParameter("content", child.ContentBytes),
+                //            });
 
-            int res = fileCommand.ExecuteNonQuery();
+                //    int res = fileCommand.ExecuteNonQuery();
 
-            int insertedId = (int)fileCommand.LastInsertedId;
+                //    int insertedId = (int)fileCommand.LastInsertedId;
 
-            return res > 0;
-        }
-
-        private bool DeleteDbFile(File file, MySqlConnection conn)
-        {
-            MySqlCommand fileCommand = new MySqlCommand(
-            "DELETE FROM files" +
-            " WHERE" +
-            " id = @id"
-            , conn);
-
-            fileCommand.Parameters.AddRange(new MySqlParameter[] {
-                        new MySqlParameter("id", file.id),
-                    });
-
-            return fileCommand.ExecuteNonQuery() > 0;
+                //return res > 0;
+                return false;
         }
     }
 }

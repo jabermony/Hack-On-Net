@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Permissions;
+using HackLinks_Server.Computers.Processes;
 using File = HackLinks_Server.Files.File;
 
 namespace HackLinks_Server.Computers.Permissions
@@ -15,16 +16,14 @@ namespace HackLinks_Server.Computers.Permissions
         public int UserId { get; set; } = -1;
         public int GroupId {get; set; }
         public string Info { get; set; }
-        public File HomeDirectory { get; set; }
-        public File DefaultProcess {get; set; }
 
         public string HomeString;
 
         public string DPString;
         
-        public Node Computer { get; }
+        public Kernel Kernel { get; }
 
-        public Account(string line,Node node)
+        public Account(string line, Kernel kernel)
         {
             string[] accountData = line.Split(':');
 
@@ -35,13 +34,10 @@ namespace HackLinks_Server.Computers.Permissions
             Info = accountData[4];
             HomeString = accountData[5];
             DPString = accountData[6];
-            Computer = node;
-            HomeDirectory = Computer.fileSystem.rootFile.GetFileAtPath(HomeString);
-            DefaultProcess = Computer.fileSystem.rootFile.GetFileAtPath(DPString);
-
+            Kernel = kernel;
         }
 
-        public Account( string username, string password, int groupId,string info,string homeString, string dpString, Node computer)
+        public Account( string username, string password, int groupId,string info,string homeString, string dpString, Kernel kernel)
         {
             HomeString = homeString;
             DPString = dpString;
@@ -49,12 +45,10 @@ namespace HackLinks_Server.Computers.Permissions
             Password = password;
             GroupId = groupId;
             Info = info;
-            Computer = computer;
-            HomeDirectory = Computer.fileSystem.rootFile.GetFileAtPath(homeString);
-            DefaultProcess = Computer.fileSystem.rootFile.GetFileAtPath(dpString);
+            Kernel = kernel;
         }
 
-        public Account(string username, string password,Group group,string info,string homeString, string dpString, Node computer)
+        public Account(string username, string password,Group group,string info,string homeString, string dpString, Kernel kernel)
         {
             Username = username;
             Password = password;
@@ -62,38 +56,32 @@ namespace HackLinks_Server.Computers.Permissions
             Info = info;
             HomeString = homeString;
             DPString = dpString;
-            HomeDirectory = computer.fileSystem.rootFile.GetFileAtPath(homeString);
-            DefaultProcess = computer.fileSystem.rootFile.GetFileAtPath(dpString);
-            Computer = computer;
+            Kernel = kernel;
         }
 
-        public Account(string username, string password, int groupId,string info, File homeDirectory, File defaultProcess, Node computer)
+        public Account(string username, string password, int groupId,string info, File homeDirectory, File defaultProcess, Kernel kernel)
         {
             Username = username;
             Password = password;
             GroupId = groupId;
             Info = info;
-            HomeDirectory = homeDirectory;
-            DefaultProcess = defaultProcess;
             HomeString = homeDirectory.Name;
             DPString = defaultProcess.Name;
-            Computer = computer;
+            Kernel = kernel;
         }
 
-        public Account(string username, string password,Group group,string info, File homeDirectory, File defaultProcess, Node computer)
+        public Account(string username, string password,Group group,string info, File homeDirectory, File defaultProcess, Kernel kernel)
         {
             Username = username;
             Password = password;
             GroupId = (int)group;
             Info = info;
-            HomeDirectory = homeDirectory;
-            DefaultProcess = defaultProcess;
             HomeString = homeDirectory.Name;
             DPString = defaultProcess.Name;
-            Computer = computer;
+            Kernel = kernel;
         }
 
-        public Group GetGroup()
+    public Group GetGroup()
         {
             switch (GroupId)
             {
@@ -110,28 +98,28 @@ namespace HackLinks_Server.Computers.Permissions
             }
         }
 
-        public void ApplyChanges()
+        public void ApplyChanges(Process process)
         {
-            File passwd = Computer.fileSystem.rootFile.GetFileAtPath("etc/passwd");
-            string[] accounts = passwd.Content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            File passwd = process.Kernel.GetFile(process, "/etc/passwd");
+            string[] accounts = passwd.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             if (UserId == -1)
             {
-                if (new Account(accounts.Last(), Computer).UserId < 1000) UserId = 1000;
-                else UserId = new Account(accounts.Last(),Computer).UserId + 1;
+                if (new Account(accounts.Last(), Kernel).UserId < 1000) UserId = 1000;
+                else UserId = new Account(accounts.Last(), Kernel).UserId + 1;
             }
 
             Account before = null;
             if (UserId == -3)
             {
-                if (new Account(accounts.Last(), Computer).UserId < 1000) UserId = new Account(accounts.Last(),Computer).UserId + 1;
+                if (new Account(accounts.Last(), Kernel).UserId < 1000) UserId = new Account(accounts.Last(), Kernel).UserId + 1;
                 else
                 {
-                    before = new Account(accounts.First(), Computer);
+                    before = new Account(accounts.First(), Kernel);
                     foreach (string account in accounts)
                     {
-                        if (new Account(account, Computer).UserId < 1000)
+                        if (new Account(account, Kernel).UserId < 1000)
                         {
-                            before = new Account(account, Computer);
+                            before = new Account(account, Kernel);
                             continue;
                         }
 
@@ -173,16 +161,16 @@ namespace HackLinks_Server.Computers.Permissions
                 }
             }
 
-            passwd.Content = acc;
+            passwd.SetContent(acc);
         }
 
-        public static List<Account> FromFile(File passwd,Node computer)
+        public static List<Account> FromFile(Process process, File passwd,Node computer)
         {
             List<Account> tmp = new List<Account>();
-            string[] accounts = passwd.Content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            string[] accounts = passwd.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             foreach (string account in accounts)
             {
-                tmp.Add(new Account(account,computer));
+                tmp.Add(new Account(account,computer.Kernel));
             }
 
             return tmp;
@@ -193,9 +181,9 @@ namespace HackLinks_Server.Computers.Permissions
             UserId = -2;
         }
 
-        public static Account FromId(int UID, Node computer)
+        public static Account FromId(int UID, Kernel kernel, Process process)
         {
-            List<Account> accounts = computer.Kernel.GetAccounts();
+            List<Account> accounts = kernel.GetAccounts(process);
             foreach (Account account in accounts)
             {
                 if (account.UserId == UID) return account;

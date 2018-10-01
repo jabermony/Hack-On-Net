@@ -1,4 +1,6 @@
-﻿using HackLinks_Server.Computers.Processes;
+﻿using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Computers.Processes;
+using HackLinks_Server.Computers.Processes.Daemons.Http.Interfaces;
 using HackLinks_Server.Files;
 using System;
 using System.Collections.Generic;
@@ -51,11 +53,11 @@ namespace HackLinks_Server.Daemons.Types.Http.Interfaces
             var interfaceFile = pageFile.Parent.GetFile(interfaceFileName);
             if (interfaceFile == null)
                 return null;
-            if (interfaceFile.Type != File.FileType.Regular)
+            if (interfaceFile.Type != FileType.Regular)
                 return null;
             if (interfaceFile.HasExecutePermission(0, Computers.Permissions.Group.ROOT))
                 return null;
-            var lines = interfaceFile.Content.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.None);
+            var lines = interfaceFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.None);
             string intId = lines[0];
 
             var newInterface = interfaceCreators[intId](attrValues);

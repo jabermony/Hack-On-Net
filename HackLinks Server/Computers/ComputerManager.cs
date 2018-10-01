@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HackLinks_Server.Util;
+using HackLinks_Server.Computers.Filesystems;
 
 namespace HackLinks_Server.Computers
 {
@@ -18,7 +19,6 @@ namespace HackLinks_Server.Computers
         private List<File> toDelete = new List<File>();
 
         public List<Node> NodeList => nodeList;
-        public List<File> ToDelete => toDelete;
 
         public ComputerManager(Server server, List<Node> nodeList)
         {
@@ -28,27 +28,10 @@ namespace HackLinks_Server.Computers
 
         public void Init()
         {
-            Logger.Info("Initializing daemons");
-            foreach (Node node in nodeList)
+            // Init all the nodes!
+            foreach(Node node in NodeList)
             {
-                var daemonsFolder = node.fileSystem.rootFile.GetFile("daemons");
-                if (daemonsFolder == null)
-                    continue;
-                var autorunFile = daemonsFolder.GetFile("autorun");
-                if (autorunFile == null)
-                    continue;
-                foreach (string line in autorunFile.Content.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var daemonFile = daemonsFolder.GetFile(line);
-                    if (daemonFile == null)
-                        continue;
-                    if (daemonFile.OwnerId != 0 || daemonFile.Group != Group.ROOT)
-                        continue;
-                    if (!daemonFile.HasExecutePermission(0, Group.ROOT))
-                        continue;
-                    //TODO user credentials from autorun file
-                    node.LaunchDaemon(daemonFile);
-                }
+                node.Init();
             }
         }
 
@@ -68,34 +51,6 @@ namespace HackLinks_Server.Computers
                 if (node.id == homeId)
                     return node;
             return null;
-        }
-
-        public static void FixFolder(List<File> files, File rootFile)
-        {
-            List<File> fixedFiles = new List<File>();
-            Queue<File> fileQueue = new Queue<File>();
-
-            fileQueue.Enqueue(rootFile);
-
-            while(fileQueue.Any())
-            {
-                File parent = fileQueue.Dequeue();
-                Logger.Info($"Processing File {parent.Name} {parent.id}");
-
-                foreach (File child in files.Where(x => x.ParentId.Equals(parent.id)))
-                {
-                    Logger.Info($"Processing Child File {child.Name} {child.id} of {parent.Name} {parent.id}");
-
-                    child.Parent = parent;
-                    parent.children.Add(child);
-
-                    fixedFiles.Add(child);
-                    if(child.Type.Equals(File.FileType.Directory))
-                    {
-                        fileQueue.Enqueue(child);
-                    }
-                }
-            }
         }
 
         public void AddToDelete(File file)

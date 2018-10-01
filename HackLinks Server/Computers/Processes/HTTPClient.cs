@@ -1,13 +1,14 @@
 ﻿using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Processes;
 using HackLinks_Server.Daemons;
-using HackLinks_Server.Daemons.Types;
-using HackLinks_Server.Daemons.Types.Http;
+using HackLinks_Server.Computers.Processes.Daemons;
+using HackLinks_Server.Computers.Processes.Daemons.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HackLinks_Server.Daemons.Types.Http;
 
 namespace HackLinks_Server.Computers.Processes
 {

@@ -1,4 +1,5 @@
-﻿using HackLinks_Server.Files;
+﻿using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Files;
 using HackLinksCommon;
 using System;
 using System.Collections.Generic;
@@ -72,7 +73,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("File not found");
                 return true;
             }
-            if (file.Type.Equals(File.FileType.Directory))
+            if (file.Type.Equals(FileType.Directory))
             {
                 process.Print("Invalid file, cannot be folder");
                 return true;
@@ -272,7 +273,7 @@ namespace HackLinks_Server.Computers.Processes
                 client.Send(NetUtil.PacketType.MESSG, "File " + command[1] + " not found.");
                 return true;
             }
-            client.Send(NetUtil.PacketType.KERNL, "changetheme", file.Content);
+            client.Send(NetUtil.PacketType.KERNL, "changetheme", file.GetContent());
             return true;
         }
     }

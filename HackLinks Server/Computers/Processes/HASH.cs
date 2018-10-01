@@ -1,4 +1,6 @@
-﻿using HackLinks_Server.Files;
+﻿using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Files;
+using HackLinks_Server.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,26 +35,25 @@ namespace HackLinks_Server.Computers.Processes
             File applicationFile = SearchPath(commandParts[0]);
             if (applicationFile != null)
             {
-                Process child = computer.Kernel.StartProcess(this, applicationFile);
+                Process child = Kernel.StartProcess(this, applicationFile);
                 child.Run(command);
                 return true;
             }
             return false;
         }
 
-        private File SearchPath(string v)
+        private File SearchPath(string value)
         {
-            File file = ActiveDirectory.GetFile(v);
-            if(file != null)
-            {
-                return file;
+            // Only explicitly relative paths can be used for starting commands
+            if (value.StartsWith("./")) { 
+                File file = ActiveDirectory.GetFile(value);
+                if (file != null)
+                {
+                    return file;
+                }
             }
-            File bin = computer.fileSystem.rootFile.GetFile("bin");
-            if(bin != null)
-            {
-                file = bin.GetFile(v);
-            }
-            return file;
+            File bin = Kernel.GetFile(this, "/bin/" + value);
+            return bin;
         }
 
         public override void WriteInput(string inputData)
@@ -80,7 +81,7 @@ namespace HackLinks_Server.Computers.Processes
             }
             string target = command[1];
 
-            process.computer.Kernel.OpenDaemon(process, target);
+            process.Kernel.OpenDaemon(process, target);
 
             return true;
         }
@@ -105,24 +106,25 @@ namespace HackLinks_Server.Computers.Processes
                     return true;
                 }
             }
-            foreach (var file in process.ActiveDirectory.children)
+
+            File file = process.ActiveDirectory.GetFile(command[1]);
+
+            if(file != null)
             {
-                if (file.Name == command[1])
+                if (!file.Type.Equals(FileType.Directory))
                 {
-                    if (!file.Type.Equals(File.FileType.Directory))
-                    {
-                        process.Print("You cannot change active directory to a file.");
-                        return true;
-                    }
-                    if (!file.HasExecutePermission(process.Credentials))
-                    {
-                        process.Print("You do not have permission to do this. You must have execute permission to access a directory.");
-                        return true;
-                    }
-                    process.ActiveDirectory = file;
-                    process.computer.Kernel.CD(process, file.Name);
+                    process.Print("You cannot change active directory to a file.");
                     return true;
                 }
+                if (!file.HasExecutePermission(process.Credentials))
+                {
+                    process.Print("You do not have permission to do this. You must have execute permission to access a directory.");
+                    return true;
+                }
+
+                process.ActiveDirectory = file;
+                process.Kernel.CD(process, file.Name);
+                return true;
             }
             process.Print("No such folder.");
             return true;

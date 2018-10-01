@@ -1,11 +1,12 @@
 ﻿using HackLinks_Server.Computers.Processes;
+using HackLinks_Server.Daemons.Types.Http.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackLinks_Server.Daemons.Types.Http.Interfaces
+namespace HackLinks_Server.Computers.Processes.Daemons.Http.Interfaces
 {
     class PasswordSecurity : WebInterface
     {

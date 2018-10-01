@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackLinks_Server.Daemons.Types.Bank
+namespace HackLinks_Server.Computers.Processes.Daemons.Bank
 {
     class BankAccount
     {

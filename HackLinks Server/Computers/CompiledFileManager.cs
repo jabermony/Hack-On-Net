@@ -5,22 +5,22 @@ namespace HackLinks_Server
 {
     public class CompiledFileManager
     {
-        private Dictionary<int, string> types = new Dictionary<int, string>();
+        private Dictionary<uint, string> types = new Dictionary<uint, string>();
 
-        public void AddType(int checksum, string type)
+        public void AddType(uint checksum, string type)
         {
             types.Add(checksum, type);
         }
 
-        public string GetType(int checksum)
+        public string GetType(uint checksum)
         {
             return types.ContainsKey(checksum) ? types[checksum] : "False";
         }
 
-        public Dictionary<int, string> GetMap()
+        public Dictionary<uint, string> GetMap()
         {
             // We return a shallow clone here to prevent unauthorized manipulation of the map
-            return new Dictionary<int, string>(types);
+            return new Dictionary<uint, string>(types);
         }
     }
 }

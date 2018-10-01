@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using HackLinks_Server.Computers;
 using System.Text.RegularExpressions;
 using static HackLinksCommon.NetUtil;
-using HackLinks_Server.Computers.Files;
 using HackLinks_Server.Database;
 using HackLinks_Server.Util;
 
@@ -22,10 +21,7 @@ namespace HackLinks_Server
         public List<GameClient> clients;
 
         private ComputerManager computerManager;
-        private FileSystemManager fileSystemManager = new FileSystemManager();
         private CompiledFileManager compileManager = new CompiledFileManager();
-
-        public FileSystemManager FileSystemManager => fileSystemManager;
 
         public DatabaseLink DatabaseLink { get; private set; }
 
@@ -152,11 +148,6 @@ namespace HackLinks_Server
         public CompiledFileManager GetCompileManager()
         {
             return compileManager;
-        }
-
-        internal void SaveDatabase()
-        {
-            DatabaseLink.UploadDatabase(computerManager.NodeList, computerManager.ToDelete);
         }
     }
 }

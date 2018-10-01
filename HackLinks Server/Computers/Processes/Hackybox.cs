@@ -1,12 +1,12 @@
-using HackLinks_Server.Daemons.Types;
 using HackLinks_Server.Files;
-using HackLinksCommon;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HackLinks_Server.Util;
+using HackLinks_Server.Computers.Filesystems;
+using HackLinks_Server.Computers.Permissions;
 
 namespace HackLinks_Server.Computers.Processes
 {
@@ -82,8 +82,8 @@ namespace HackLinks_Server.Computers.Processes
                     process.Print("Permission denied.");
                     return true;
                 }
-
-                file.Content += '\n' + cmdArgs.JoinWords(" ", 2);
+                // TODO use file streams instead ? 
+                file.SetContent(file.GetContent() + '\n' + cmdArgs.JoinWords(" ", 2));
                 process.Print("Content appended.");
                 return true;
             }
@@ -111,9 +111,9 @@ namespace HackLinks_Server.Computers.Processes
                     process.Print("Wrong line number.");
                     return true;
                 }
-                var nth = file.Content.GetNthOccurence(n, '\n');
-                file.Content = file.Content.Remove(nth, file.Content.GetNthOccurence(n + 1, '\n') - nth);
-                file.Content = file.Content.Insert(nth, '\n' + cmdArgs.JoinWords(" ", 3));
+                int nth = file.GetContent().GetNthOccurence(n, '\n');
+                string content = file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth);
+                file.SetContent(content.Insert(nth, '\n' + cmdArgs.JoinWords(" ", 3)));
                 process.Print("Line edited.");
                 return true;
             }
@@ -141,8 +141,8 @@ namespace HackLinks_Server.Computers.Processes
                     process.Print("Wrong line number.");
                     return true;
                 }
-                var nth = file.Content.GetNthOccurence(n, '\n');
-                file.Content = file.Content.Remove(nth, file.Content.GetNthOccurence(n + 1, '\n') - nth);
+                var nth = file.GetContent().GetNthOccurence(n, '\n');
+                file.SetContent(file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth));
                 process.Print("Line removed");
                 return true;
             }
@@ -170,7 +170,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Print("Wrong line number.");
                     return true;
                 }
-                file.Content = file.Content.Insert(file.Content.GetNthOccurence(n, '\n'), '\n' + cmdArgs.JoinWords(" ", 3));
+                file.SetContent(file.GetContent().Insert(file.GetContent().GetNthOccurence(n, '\n'), '\n' + cmdArgs.JoinWords(" ", 3)));
                 process.Print("Content inserted");
                 return true;
             }
@@ -198,7 +198,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("File " + cmdArgs[0] + " not found.");
                 return true;
             }
-            if (file.Type.Equals(File.FileType.Directory))
+            if (file.Type.Equals(FileType.Directory))
             {
                 process.Print("You cannot display a directory.");
                 return true;
@@ -209,7 +209,7 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            process.computer.Kernel.Display(process, "view", file.Name, file.Content);
+            process.Kernel.Display(process, "view", file.Name, file.GetContent());
             return true;
         }
 
@@ -250,14 +250,14 @@ namespace HackLinks_Server.Computers.Processes
                 group = null;
             }
 
-            if (!process.computer.HasUser(username))
+            if (!process.Kernel.HasUser(username))
             {
                 process.Print($"User {username} does not exist!");
                 return true;
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var file in activeDirectory.children)
+            foreach (var file in activeDirectory.GetChildren())
             {
                 if (file.Name == cmdArgs[0])
                 {
@@ -266,7 +266,7 @@ namespace HackLinks_Server.Computers.Processes
                         process.Print("Permission denied. Only the current file owner may change file permissions.");
                         return true;
                     }
-                    file.OwnerId = process.computer.GetUserId(username);
+                    file.SetOwnerId(process.Kernel.GetUserId(username));
                     string message;
                     if (group.HasValue)
                     {
@@ -300,7 +300,7 @@ namespace HackLinks_Server.Computers.Processes
             var activePrivs = process.Credentials.Groups;
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.children)
+            foreach (var fileC in activeDirectory.GetChildren())
             {
                 if (fileC.Name == cmdArgs[1])
                 {
@@ -310,13 +310,15 @@ namespace HackLinks_Server.Computers.Processes
                         return true;
                     }
 
-                    if (!Permissions.PermissionHelper.ApplyModifiers(cmdArgs[0], fileC.Permissions))
+                    if (!Permissions.PermissionHelper.ApplyModifiers(cmdArgs[0], fileC.PermissionValue, out int outValue))
                     {
                         process.Print($"Invalid mode '{cmdArgs[0]}'\r\nUsage : chmod [permissions] [file]");
                         return true;
                     }
 
-                    process.Print($"File {fileC.Name} permissions changed. to {fileC.Permissions.PermissionValue}");
+                    process.Kernel.SetFilePermissionValue(process, fileC.FileHandle, outValue);
+
+                    process.Print($"File {fileC.Name} permissions changed. to {fileC.PermissionValue}");
 
                     return true;
                 }
@@ -338,7 +340,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("Usage : login [username] [password]");
                 return true;
             }
-            process.computer.Kernel.Login(process, args[0], args[1]);
+            process.Kernel.Login(process, args[0], args[1]);
             return true;
         }
 
@@ -369,28 +371,28 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            process.computer.Kernel.Connect(process, command[1]);
+            process.Kernel.Connect(process, command[1]);
 
             return true;
         }
 
         public static bool Disconnect(CommandProcess process, string[] command)
         {
-            process.computer.Kernel.Disconnect(process);
+            process.Kernel.Disconnect(process);
 
             return true;
         }
 
+        // TOOD use file timestamps in LS output somehow.
         public static bool Ls(CommandProcess process, string[] command)
         {
-            File root = process.computer.fileSystem.rootFile;
             if (command.Length == 2)
             {
-                foreach (File file in process.ActiveDirectory.children)
+                foreach (File file in process.ActiveDirectory.GetChildren())
                 {
                     if (command[1] == file.Name)
                     {
-                        process.Print($"File {file.Name} > Owner '{process.computer.GetUsername(file.OwnerId)}' Group '{file.Group}' Permissions '{Permissions.PermissionHelper.PermissionToDisplayString(file.Permissions)}'");
+                        process.Print($"{file.Type} {file.Name} > Owner '{process.Kernel.GetUsername(file.OwnerId)}' Group '{file.Group}' Permissions '{PermissionHelper.PermissionToDisplayString(file.PermissionValue)}'");
                         return true;
                     }
                 }
@@ -400,24 +402,25 @@ namespace HackLinks_Server.Computers.Processes
             else
             {
                 List<string> fileList = new List<string>(new string[] { process.ActiveDirectory.Name });
-                foreach (File file in process.ActiveDirectory.children)
+                foreach (File file in process.ActiveDirectory.GetChildren())
                 {
                     if (file.HasReadPermission(process.Credentials))
                     {
                         fileList.AddRange(new string[] {
-                                file.Name, (file.Type.Equals(File.FileType.Directory) ? "d" : "f"), (file.HasWritePermission(process.Credentials) ? "w" : "-")
+                                file.Name, (file.Type.Equals(FileType.Directory) ? "d" : "f"), (file.HasWritePermission(process.Credentials) ? "w" : "-")
                             });
                     }
                     else
                     {
-                        Logger.Warning($"User {process.computer.GetUsername(process.Credentials.UserId)} doesn't have permission for {file.Name} {file.Group} {file.Permissions.PermissionValue}");
+                        Logger.Warning($"User {process.Kernel.GetUsername(process.Credentials.UserId)} doesn't have permission for {file.Name} {file.Group} {PermissionHelper.PermissionToDisplayString(file.PermissionValue)}");
                     }
                 }
-                process.computer.Kernel.LS(process, fileList.ToArray());
+                process.Kernel.LS(process, fileList.ToArray());
                 return true;
             }
         }
 
+        //TODO update file timestamps on touch. Like linux.
         public static bool Touch(CommandProcess process, string[] command)
         {
             if (command.Length < 2)
@@ -426,12 +429,11 @@ namespace HackLinks_Server.Computers.Processes
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.children)
+            foreach (var fileC in activeDirectory.GetChildren())
             {
                 if (fileC.Name == command[1])
                 {
                     process.Print("File " + command[1] + " touched.");
-                    fileC.Dirty = true;
                     return true;
                 }
             }
@@ -441,11 +443,7 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            File file = process.computer.fileSystem.CreateFile(process.computer, activeDirectory, command[1]);
-            file.OwnerId = process.Credentials.UserId;
-            file.Permissions.SetPermission(FilePermissions.PermissionType.User, true, true, false);
-            file.Permissions.SetPermission(FilePermissions.PermissionType.Group, true, true, false);
-            file.Group = file.Parent.Group;
+            File file = process.Kernel.CreateFile(process, activeDirectory, command[1], Permission.A_All, process.Credentials.UserId, process.Credentials.Group);
 
             process.Print("File " + command[1]);
             return true;
@@ -458,7 +456,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Print("Usage : rm [fileName]");
             }
             var activeDirectory = process.ActiveDirectory;
-            foreach (var file in activeDirectory.children)
+            foreach (var file in activeDirectory.GetChildren())
             {
                 if (file.Name == command[1])
                 {
@@ -469,7 +467,7 @@ namespace HackLinks_Server.Computers.Processes
                     }
                     process.Print("File " + command[1] + " removed.");
 
-                    process.computer.Kernel.RemoveFile(process, file);
+                    process.Kernel.UnlinkFile(process, file.FileHandle);
                     return true;
                 }
             }
@@ -489,7 +487,7 @@ namespace HackLinks_Server.Computers.Processes
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.children)
+            foreach (var fileC in activeDirectory.GetChildren())
             {
                 if (fileC.Name == command[1])
                 {
@@ -506,11 +504,8 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            File file = process.computer.fileSystem.CreateFile(process.computer, activeDirectory, command[1]);
-            file.OwnerId = process.Credentials.UserId;
-            file.Permissions.SetPermission(FilePermissions.PermissionType.User, true, true, true);
-            file.Permissions.SetPermission(FilePermissions.PermissionType.Group, true, true, true);
-            file.Group = file.Parent.Group;
+            File file = process.Kernel.CreateFile(process, activeDirectory, command[1], Permission.A_All & ~Permission.O_All, process.Credentials.UserId, process.Credentials.Group, FileType.Directory);
+
             return true;
         }
 
@@ -521,8 +516,7 @@ namespace HackLinks_Server.Computers.Processes
             command.AddRange(commandUnsplit[1].Split());
             if (command.Count < 4)
             {
-                //TODO kernel
-                //client.Send(NetUtil.PacketType.MESSG, "Usage: netmap [ip] [x] [y]");
+                process.Print("Usage: netmap [ip] [x] [y]");
                 return true;
             }
             //TODO kernel
@@ -539,7 +533,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Print("Usage: music [(nameofsong) (Note: Must be in a folder called \"HNMPMusic\" in the Mods folder as an .wav file.)]\nOR music shuffle\nOR music list");
                     return true;
                 }
-                process.computer.Kernel.PlayMusic(process, command[1]);
+                process.Kernel.PlayMusic(process, command[1]);
                 return true;
             } catch(ObjectDisposedException e) {
                 Logger.Exception(e);

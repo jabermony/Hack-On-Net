@@ -98,7 +98,8 @@ namespace HackOnNet.Modules
             this.y += 5;
             this.spriteBatch.DrawString(GuiData.font, LocaleTerms.Loc("Connected to") + " ", new Vector2((float)(this.x + 160), (float)this.y), Color.White);
             this.y += 40;
-            string text = userScreen.activeSession.serverName;
+            // TODO remove this shim. It's there to avoid an exception caused by a (possible) race condition. I think ...
+            string text = userScreen.activeSession.serverName ?? "";
             Hacknet.Gui.TextItem.doFontLabel(new Vector2((float)(this.x + 160), (float)this.y), text, GuiData.font, new Color?(Color.White), (float)this.bounds.Width - 190f, 60f, false);
             this.y += 33;
             float num = Hacknet.Localization.LocaleActivator.ActiveLocaleIsCJK() ? 4f : 0f;

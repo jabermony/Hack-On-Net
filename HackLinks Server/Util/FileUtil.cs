@@ -52,7 +52,7 @@ namespace HackLinks_Server.Util
         {
             List<FileHandle> files = new List<FileHandle>();
             foreach(DirRecord dirRecord in GetDirectoryList(system, file)) {
-                files.Add(new FileHandle(system, dirRecord.inode, $"{file.Path.TrimEnd('/')}/{dirRecord.name}"));
+                files.Add(new FileHandle(system, dirRecord.inode, file.FilePath.Path, dirRecord.name));
             }
             return files;
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HackLinks_Server.Computers.Filesystems;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,15 +14,15 @@ namespace HackLinks_Server.Util
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static string Basename(string path)
+        public static string Basename(List<FileHandle> path)
         {
-            string[] parts = path.Split('/');
-            int basenameIndex = parts.Length - 1;
-            while(parts[basenameIndex].Length == 0 && basenameIndex > 0)
+            if (path.Count > 0)
             {
-                basenameIndex--;
+                return path[path.Count - 1].Name;
+            } else
+            {
+                return "";
             }
-            return parts[basenameIndex];
         }
 
         public static string Normalize(string rawPath, string currentDirectory)

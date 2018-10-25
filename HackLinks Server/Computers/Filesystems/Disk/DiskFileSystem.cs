@@ -17,39 +17,38 @@ namespace HackLinks_Server.Computers.Filesystems
 
         private FileHandle GetRootHandle()
         {
-            return new FileHandle(this, 0, "/");
+            return new FileHandle(this, 1, new List<FileHandle>(), "/");
         }
 
         public override FileHandle GetFileHandle(string path)
         {
-            return GetFileHandleAt(path, new FileHandle(this, 1, "/"));
+            return GetFileHandleAt(path, GetRootHandle());
         }
 
         public override FileHandle GetFileHandleAt(string inPath, FileHandle currentDirectory)
         {
             // A check for absolute paths. If we're absolute with a relative invocation then we'll call out.
-            if(inPath.StartsWith("/") && !currentDirectory.Path.Equals("/"))
+            if(inPath.StartsWith("/") && currentDirectory.Name != "/")
             {
                 return GetFileHandle(inPath);
             }
-                
-            string path = PathUtil.Normalize(inPath, currentDirectory.Path);
-            string[] parts;
-            if (path.StartsWith(currentDirectory.Path) && !currentDirectory.Path.Equals("/"))
-            {
-                parts = path.Substring(currentDirectory.Path.Length).Split('/');
-            } else
-            {
-                parts = path.Split('/');
-            }
 
-            for(int pos = path.StartsWith("/") ? 1 : 0; pos < parts.Length; pos++)
-            { 
-                if (path.Equals(currentDirectory.Path))
-                {
-                    return currentDirectory;
-                }
+            string[] parts = inPath.Split('/');
+
+            for (int pos = 0; pos < parts.Length; pos++)
+            {
                 string next = parts[pos];
+
+                if (next.Equals(".") || next.Equals(""))
+                {
+                    continue;
+                }
+
+                if (next.Equals(".."))
+                {
+                    currentDirectory = currentDirectory.FilePath.Parent;
+                    continue;
+                }
 
                 List<FileHandle> files = FileUtil.GetDirectoryFileHandles(this, currentDirectory);
                 FileHandle nextDirectory = null;
@@ -67,13 +66,9 @@ namespace HackLinks_Server.Computers.Filesystems
                 } else
                 {
                     currentDirectory = nextDirectory;
-                    if (path.Equals(currentDirectory.Path))
-                    {
-                        return currentDirectory;
-                    }
                 }
             };
-            return null;
+            return currentDirectory;
         }
 
         public override int GetPermissions(FileHandle fileHandle)
@@ -138,7 +133,7 @@ namespace HackLinks_Server.Computers.Filesystems
 
         public override void UnlinkFile(FileHandle fileHandle)
         {
-            FileHandle parent = GetFileHandle(PathUtil.Dirname(fileHandle.Path));
+            FileHandle parent = fileHandle.FilePath.Parent;
 
             List<FileUtil.DirRecord> directoryRecords = FileUtil.GetDirectoryList(this, parent);
 
@@ -171,7 +166,7 @@ namespace HackLinks_Server.Computers.Filesystems
 
             Link(directory, name, ID, inode.ID);
 
-            return new FileHandle(this, inode.ID, $"{directory.Path}/{name}");
+            return new FileHandle(this, inode.ID, directory.FilePath.Path, name);
         }
 
         public void Link(FileHandle directory, string name,ulong filesystemId, ulong inodeID)

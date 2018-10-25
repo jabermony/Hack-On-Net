@@ -22,18 +22,19 @@ namespace HackLinks_Server.Computers.Filesystems
         /// <summary>
         /// The absolute path used to open this file.
         /// </summary>
-        public string Path { get; }
+        public FilePath FilePath { get; }
+
         /// <summary>
         /// The filename. Strictly the string following the last non-trailing forward slash in Path.
         /// </summary>
         public string Name { get; }
 
-        public FileHandle(Filesystem filesystem, ulong inode, string path)
+        public FileHandle(Filesystem filesystem, ulong inode, List<FileHandle> path, string name)
         {
             FilesystemId = filesystem.ID;
             Inode = inode;
-            Path = path;
-            Name = PathUtil.Basename(path);
+            Name = name;
+            FilePath = new FilePath(path, this);
         }
     }
 }

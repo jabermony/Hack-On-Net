@@ -91,7 +91,7 @@ namespace HackLinks_Server.Database
             using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
             {
                 conn.Open();
-                MySqlCommand fileCommand = new MySqlCommand("UPDATE files SET content = INSERT(RPAD(content, @minLen, CHAR(0)), @position, @count, @buffer) WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
+                MySqlCommand fileCommand = new MySqlCommand("UPDATE files SET content = INSERT(RPAD(IFNULL(content,\"\"), @minLen, CHAR(0)), @position, @count, @buffer) WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
                 fileCommand.Parameters.AddRange(
                     new MySqlParameter[]{
                         new MySqlParameter("position", position + 1),
@@ -123,6 +123,12 @@ namespace HackLinks_Server.Database
         {
             using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
             {
+                // if we've been asked to read 0 then return 0. NOP
+                if (count == 0)
+                {
+                    buffer = new byte[0];
+                    return 0;
+                }
                 conn.Open();
                 MySqlCommand fileCommand = new MySqlCommand("SELECT SUBSTRING(content, @position, @count) FROM files WHERE computer_Id = @computer_Id AND filesystem_id = @filesystem_id AND inode = @inode", conn);
                 fileCommand.Parameters.AddRange(

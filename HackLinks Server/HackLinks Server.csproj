@@ -65,6 +65,7 @@
     <Compile Include="Computers\CompiledFileManager.cs" />
     <Compile Include="Computers\Filesystems\Disk\DBFileStream.cs" />
     <Compile Include="Computers\Filesystems\Disk\DiskInode.cs" />
+    <Compile Include="Computers\Filesystems\FilePath.cs" />
     <Compile Include="Computers\Filesystems\Permission.cs" />
     <Compile Include="Computers\Filesystems\FileTypes.cs" />
     <Compile Include="Computers\Filesystems\Inode.cs" />
@@ -145,8 +146,6 @@
       <Name>HackLinksCommon</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Computers\Filesystems\Device\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -15,12 +15,22 @@ namespace HackLinks_Server.Computers.Processes
         public override void Run(string command)
         {
             base.Run(command);
+            var rootFile = Kernel.GetFile(this, "/");
+            rootFile.GetFile("daemons");
             var daemonsFolder = Kernel.GetFile(this, "/daemons");
             if (daemonsFolder == null)
-                return;
+            {
+                Kernel.CreateFile(Kernel.GetFile(this, "/").FileHandle, "daemons", Filesystems.Permission.O_All | Filesystems.Permission.G_All | Filesystems.Permission.U_Read, Credentials.UserId, Credentials.Group, Filesystems.FileType.Directory);
+                daemonsFolder = Kernel.GetFile(this, "/daemons");
+            }
+
             var autorunFile = daemonsFolder.GetFile("autorun");
             if (autorunFile == null)
-                return;
+            {
+                Kernel.CreateFile(daemonsFolder.FileHandle, "autorun", Filesystems.Permission.O_All | Filesystems.Permission.G_All | Filesystems.Permission.U_Read, Credentials.UserId, Credentials.Group);
+                autorunFile = daemonsFolder.GetFile("autorun");
+            }
+                
             string content = autorunFile.GetContent();
             if (content == null)
                 return;

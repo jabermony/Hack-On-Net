@@ -137,12 +137,12 @@ namespace HackLinks_Server.Computers
 
         public FileHandle GetParentFileHandle(FileHandle fileHandle)
         {
-            return GetFileHandle(fileHandle.FilesystemId, PathUtil.Dirname(fileHandle.Path));
+            return fileHandle.FilePath.Parent;
         }
 
         public File GetParentFile(Process process, File file)
         {
-            return GetFile(process, file.FileHandle.FilesystemId, PathUtil.Dirname(file.FileHandle.Path));
+            return new File(process, file.FileHandle.FilePath.Parent);
         }
 
         private Session GetSession(Process process)

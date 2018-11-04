@@ -72,7 +72,14 @@ namespace HackLinks_Server.Computers.Filesystems.Disk
                     newpos = Length + offset;
                     break;
             }
-            position = newpos < Length ? (newpos < 0 ? 0 : newpos) : Length;
+
+            if (newpos < 0)
+            {
+                throw new IOException("An attempt was made to move the position before the beginning of the stream");
+            }
+
+            position = newpos;
+
             return position;
         }
 

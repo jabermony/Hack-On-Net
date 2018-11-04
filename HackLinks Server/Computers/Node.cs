@@ -26,6 +26,10 @@ namespace HackLinks_Server.Computers
         public IDictionary<ulong,Filesystem> Filesystems { get; } = new Dictionary<ulong,Filesystem>();
 
         public List<Session> sessions = new List<Session>();
+
+        private List<ProcessSession> processSessions = new List<ProcessSession>();
+        public List<ProcessSession> ProcessSessions => processSessions;
+
         public List<Daemon> daemons = new List<Daemon>();
         public List<Log> logs = new List<Log>();
 
@@ -53,11 +57,11 @@ namespace HackLinks_Server.Computers
             initProcess.Run("");
         }
 
-        public Session GetSession(int processId)
+        public ProcessSession GetProcessSession(int processId)
         {
             do
             {
-                foreach (Session session in sessions)
+                foreach (ProcessSession session in ProcessSessions)
                 {
                     if(session.HasProcessId(processId))
                     {

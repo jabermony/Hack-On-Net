@@ -61,14 +61,14 @@ namespace HackLinks_Server
             {
                 case PacketType.COMND:
                     //TODO fix cludge
-                    if(client.activeSession == null)
+                    if(client.ActiveSession == null)
                         client.ConnectTo(client.homeComputer);
                     if (client.status == GameClient.PlayerStatus.TERMINATED)
                         break;
                     //TODO fixup
                     // if (!CommandHandler.TreatCommand(client, messages[0]))
                     //    client.Send(PacketType.OSMSG, "ERR:0"); // OSMSG:ERR:0 = La commande est introuvable
-                    client.activeSession.WriteInput(messages[0]);
+                    client.ActiveProcessSession.WriteInput(messages[0]);
                     break;
                 case PacketType.LOGIN:
                     if (messages.Length < 2)
@@ -118,8 +118,10 @@ namespace HackLinks_Server
 
         public void RemoveClient(GameClient client)
         {
-            if(client.activeSession != null)
-                client.activeSession.DisconnectSession();
+            if(client.ActiveSession != null)
+                client.ActiveSession.DisconnectSession();
+            if (client.ActiveProcessSession != null)
+                client.ActiveProcessSession.DisconnectSession();
             Logger.Info(client.username + " disconnected from server.");
             clients.Remove(client);
         }
@@ -138,9 +140,9 @@ namespace HackLinks_Server
             Thread.Sleep(10);
             foreach(GameClient client in clients)
             {
-                if(client.activeSession != null)
+                if(client.ActiveSession != null)
                 {
-                    client.activeSession.UpdateTrace(dT);
+                    client.ActiveSession.UpdateTrace(dT);
                 }
             }
         }

@@ -83,8 +83,8 @@ namespace HackLinks_Server.Computers
 
         private GameClient GetClient(Process process)
         {
-            Session session = node.GetSession(process.ProcessId) ?? null;
-            return session  != null? session.owner : null;
+            ProcessSession session = node.GetProcessSession(process.ProcessId) ?? null;
+            return session  != null? session.Owner : null;
         }
 
         public string GetFileContent(Process process, FileHandle fileHandle)
@@ -150,9 +150,9 @@ namespace HackLinks_Server.Computers
             return new File(process, file.FileHandle.FilePath.Parent);
         }
 
-        private Session GetSession(Process process)
+        private ProcessSession GetProcessSession(Process process)
         {
-            return node.GetSession(process.ProcessId);
+            return node.GetProcessSession(process.ProcessId);
             // TODO throw exception if null. All processes here should belong to a session.
         }
 
@@ -172,7 +172,7 @@ namespace HackLinks_Server.Computers
                 client.Login(node, credentials);
                 client.Send(NetUtil.PacketType.MESSG, "Logged as : " + username);
                 // TODO log
-                //Log(Log.LogEvents.Login, node.logs.Count + 1 + " " + client.homeComputer.ip + " logged in as " + username, client.activeSession.sessionId, client.homeComputer.ip);
+                //Log(Log.LogEvents.Login, node.logs.Count + 1 + " " + client.homeComputer.ip + " logged in as " + username, client.ActiveSession.sessionId, client.homeComputer.ip);
             } else
             {
                 client.Send(NetUtil.PacketType.MESSG, "Wrong identificants.");
@@ -281,8 +281,10 @@ namespace HackLinks_Server.Computers
         public void Connect(Process process, string host)
         {
             GameClient client = GetClient(process);
-            if (client.activeSession != null)
-                client.activeSession.DisconnectSession();
+            if (client.ActiveSession != null)
+                client.ActiveSession.DisconnectSession();
+            if (client.ActiveProcessSession != null)
+                client.ActiveProcessSession.DisconnectSession();
             var compManager = client.server.GetComputerManager();
             string resultIP = null;
 
@@ -328,7 +330,7 @@ namespace HackLinks_Server.Computers
             GameClient client = GetClient(child);
             if (client != null)
             {
-                Session session = client.activeSession;
+                ProcessSession session = client.ActiveProcessSession;
                 if (session.HasProcessId(child.ProcessId))
                 {
                     session.AttachProcess(parent);
@@ -383,15 +385,15 @@ namespace HackLinks_Server.Computers
 
         public void OpenDaemon(CommandProcess process, string target)
         {
-            Session activeSession = GetClient(process).activeSession;
-            foreach (Daemon daemon in activeSession.connectedNode.daemons)
+            Session ActiveSession = GetClient(process).ActiveSession;
+            foreach (Daemon daemon in ActiveSession.connectedNode.daemons)
             {
                 if (daemon.IsOfType(target))
                 {
-                    DaemonClient daemonClient = daemon.CreateClient(activeSession, process);
-                    StartProcess(process, daemonClient);
-                    daemon.OnConnect(activeSession, daemonClient);
-                    GetClient(process).activeSession.AttachProcess(daemonClient);
+                    DaemonClient daemonClient = daemon.CreateClient(ActiveSession, process);
+                    SetupProcess(process, daemonClient);
+                    daemon.OnConnect(ActiveSession, daemonClient);
+                    GetClient(process).ActiveProcessSession.AttachProcess(daemonClient);
                 }
             }
         }

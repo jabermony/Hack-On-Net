@@ -107,13 +107,13 @@ namespace HackLinks_Server.Computers.Processes
             }
             if (command[1] == "realTrace")
             {
-                if (client.activeSession != null)
-                    client.activeSession.SetTraceLevel(5);
+                if (client.ActiveSession != null)
+                    client.ActiveSession.SetTraceLevel(5);
             }
             if (command[1] == "realMagic")
             {
-                if (client.activeSession != null)
-                    client.activeSession.SetTraceLevel(-5);
+                if (client.ActiveSession != null)
+                    client.ActiveSession.SetTraceLevel(-5);
             }
             return true;
         }

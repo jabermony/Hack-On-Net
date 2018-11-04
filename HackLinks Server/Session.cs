@@ -21,33 +21,16 @@ namespace HackLinks_Server
 
         public GameClient owner;
         public Node connectedNode;
-        private Process attachedProcess;
-
-        public bool HasProcessId(int pid)
-        {
-            return attachedProcess.ProcessId == pid;
-        }
-
-        public void AttachProcess(Process process)
-        {
-            attachedProcess = process;
-        }
 
         public int sessionId;
 
-        public Session(GameClient client, Node node, Process process)
+        public Session(GameClient client, Node node)
         {
             this.connectedNode = node;
             this.owner = client;
             this.sessionId = GenerateSessionId(node);
-            this.attachedProcess = process;
             node.sessions.Add(this);
             SendNodeInfo();
-        }
-
-        public void WriteInput(string inputData)
-        {
-            attachedProcess.WriteInput(inputData);
         }
 
         public void SendNodeInfo()
@@ -88,7 +71,6 @@ namespace HackLinks_Server
             ResetTrace();
             if (this.connectedNode != null)
                 this.connectedNode.sessions.Remove(this);
-            //TODO kill process
             connectedNode = null;
         }
 

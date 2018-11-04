@@ -26,7 +26,9 @@ namespace HackLinks_Server
 
         public string username = "";
 
-        public Session activeSession;
+        public Session ActiveSession { get; private set; }
+        public ProcessSession ActiveProcessSession { get; private set; }
+
         public List<Permissions> permissions =  new List<Permissions>();
         public Node homeComputer;
 
@@ -60,7 +62,9 @@ namespace HackLinks_Server
 
             // TODO query passwd for shell
             Process process = CreateProcess(node, "HASH", credentials);
-            activeSession = new Session(this, node, process);
+            ActiveSession = new Session(this, node);
+            ActiveProcessSession = new ProcessSession(this, process);
+            node.ProcessSessions.Add(ActiveProcessSession);
         }
 
         public Process CreateProcess(Node node, string type, Process parent)
@@ -96,11 +100,16 @@ namespace HackLinks_Server
 
         public void Disconnect()
         {
-            if(activeSession != null)
+            if(ActiveSession != null)
             {
-                activeSession.DisconnectSession();
-                activeSession = null;
+                ActiveSession.DisconnectSession();
+                ActiveSession = null;
                 Send(PacketType.KERNL, "disconnect");
+            }
+            if (ActiveProcessSession != null)
+            {
+                ActiveProcessSession.DisconnectSession();
+                ActiveProcessSession = null;
             }
         }
 
@@ -205,10 +214,10 @@ namespace HackLinks_Server
 
         public void TraceTermination()
         {
-            if(this.activeSession != null)
+            if(this.ActiveSession != null)
             {
-                activeSession.traceSpd = 0;
-                activeSession.trace = 0;
+                ActiveSession.traceSpd = 0;
+                ActiveSession.trace = 0;
             }
             
 

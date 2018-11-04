@@ -25,14 +25,14 @@ namespace HackLinks_Server.Computers.Filesystems
 
         A_All     = 0b111_111_111,
         A_Execute = 0b001_001_001,
-        A_Read    = 0b010_010_010,
-        A_Write   = 0b100_100_100,
+        A_Write   = 0b010_010_010,
+        A_Read    = 0b100_100_100,
     }
 
     public enum PermissionClass
     {
         Execute = 0b001_001_001,
-        Read = 0b010_010_010,
-        Write = 0b100_100_100,
+        Write =   0b010_010_010,
+        Read =    0b100_100_100,
     }
 }

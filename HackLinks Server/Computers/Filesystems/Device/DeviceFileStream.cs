@@ -11,8 +11,6 @@ namespace HackLinks_Server.Computers.Filesystems.Device
     {
         private Reader read;
         private Writer write;
-        private ulong filesystemId;
-        private ulong inode;
 
         public override bool CanRead => true;
 

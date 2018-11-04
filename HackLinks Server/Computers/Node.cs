@@ -57,7 +57,6 @@ namespace HackLinks_Server.Computers
             TempFileSystem tempFileSystem = new TempFileSystem(id, 1);
             Filesystems[1] = tempFileSystem;
             DeviceFileSystem deviceSystem = new DeviceFileSystem(id, 2);
-            //deviceSystem.RegisterNewFile(new DeviceInode(deviceSystem, 1, DBUtil.GenerateMode(FileType.Regular, Permission.A_All)));
             Filesystems[2] = deviceSystem;
 
             // This call will return null if our file already exists
@@ -69,8 +68,10 @@ namespace HackLinks_Server.Computers
                 Group = Group.ROOT
             };
             tempFileSystem.RegisterNewFile(dev);
-            Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "dev", 1, 2);
-
+            Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "dev", tempFileSystem.ID, 2);
+            deviceSystem.RegisterNewFile(new DeviceInode(deviceSystem, 1, DBUtil.GenerateMode(FileType.Regular, Permission.A_All)));
+            FileHandle devfh = Filesystems[0].GetFileHandle("/dev");
+            Filesystems[devfh.FilesystemId].LinkFile(devfh, "raw", deviceSystem.ID, 1);
             initProcess = new Init(1, this, new Credentials(0, Group.ROOT));
             RegisterProcess(initProcess);
             initProcess.Run("");

@@ -97,8 +97,8 @@ namespace HackLinks_Server.Database
             "user:x:2:root,admin,user\r\n" +
             "guest:x:3:root,admin,user,guest\r\n" +
             "', 1), "
-            +$"(1, 0, 5, {DBUtil.GenerateMode(FileType.Directory, Permission.A_All)}, 1, 0, UNHEX('{FileUtil.BuildFileListing(new FileUtil.DirRecord(0, 6, "hackybox"), new FileUtil.DirRecord(0, 6, "login"), new FileUtil.DirRecord(0, 6, "ls"), new FileUtil.DirRecord(0, 6, "rm"), new FileUtil.DirRecord(0, 6, "touch"), new FileUtil.DirRecord(0, 6, "netmap"), new FileUtil.DirRecord(0, 6, "mv"), new FileUtil.DirRecord(0, 6, "cp"))}'), 1), "
-            +$"(1, 0, 6, {DBUtil.GenerateMode(FileType.Regular, Permission.A_All)}, 1, 0, 'hackybox', 3), " // Important. Increment count for each new copy
+            +$"(1, 0, 5, {DBUtil.GenerateMode(FileType.Directory, Permission.A_All)}, 1, 0, UNHEX('{FileUtil.BuildFileListing(new FileUtil.DirRecord(0, 6, "hackybox"), new FileUtil.DirRecord(0, 6, "login"), new FileUtil.DirRecord(0, 6, "ls"), new FileUtil.DirRecord(0, 6, "rm"), new FileUtil.DirRecord(0, 6, "touch"), new FileUtil.DirRecord(0, 6, "netmap"), new FileUtil.DirRecord(0, 6, "view"), new FileUtil.DirRecord(0, 6, "ln"))}'), 1), "
+            +$"(1, 0, 6, {DBUtil.GenerateMode(FileType.Regular, Permission.A_All)}, 1, 0, 'hackybox', 8), " // Important. Increment count for each new copy
             +$"(1, 0, 99, {DBUtil.GenerateMode(FileType.Regular, Permission.A_All)}, 1, 0, NULL, 1) "
             ,
 

@@ -110,6 +110,22 @@ namespace HackLinks_Server.Computers.Filesystems
         public abstract void UnlinkFile(FileHandle fileHandle);
 
         /// <summary>
+        /// Link the given fileHandle to a parent file.
+        /// </summary>
+        /// <param name="parent">Parent file to link to</param>
+        /// <param name="fileHandle"></param>
+        public abstract void LinkFile(FileHandle parent, FileHandle fileHandle, string name);
+
+        /// <summary>
+        /// Link the given fileHandle to a parent file.
+        /// </summary>
+        /// <param name="parent">Parent file to link to</param>
+        /// <param name="name"></param>
+        /// <param name="filesystemId"></param>
+        /// <param name="inodeID"></param>
+        public abstract FileHandle LinkFile(FileHandle directory, string name, ulong filesystemId, ulong inodeID);
+
+        /// <summary>
         /// Create the given file within the given directory
         /// </summary>
         /// <param name="directory"></param>

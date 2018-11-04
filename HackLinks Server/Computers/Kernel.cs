@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Filesystems;
 using HackLinks_Server.Util;
+using static HackLinksCommon.NetUtil;
 
 namespace HackLinks_Server.Computers
 {
@@ -99,10 +100,12 @@ namespace HackLinks_Server.Computers
         private string GetFileContent(FileHandle fileHandle)
         {
             // TODO optimise
-            System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle);
-            byte[] bytes = new byte[fStream.Length];
-            fStream.Read(bytes, 0, (int)fStream.Length);
-            return Encoding.UTF8.GetString(bytes);
+            using (System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle))
+            {
+                byte[] bytes = new byte[fStream.Length];
+                fStream.Read(bytes, 0, (int)fStream.Length);
+                return Encoding.UTF8.GetString(bytes);
+            }
         }
 
         public bool SetFileContent(Process process, FileHandle fileHandle, string newContent)
@@ -118,11 +121,13 @@ namespace HackLinks_Server.Computers
         private void SetFileContent(FileHandle fileHandle, string newContent)
         {
             // TODO optimise
-            System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle);
-            byte[] bytes = Encoding.UTF8.GetBytes(newContent);
-            fStream.Write(bytes, 0, bytes.Length);
-            // truncate the file to its new length.
-            fStream.SetLength(bytes.Length);
+            using (System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle))
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(newContent);
+                fStream.Write(bytes, 0, bytes.Length);
+                // truncate the file to its new length.
+                fStream.SetLength(bytes.Length);
+            }
         }
 
         public uint GetFileChecksum(FileHandle fileHandle)

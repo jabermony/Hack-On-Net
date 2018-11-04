@@ -1,17 +1,17 @@
-﻿using HackLinks_Server.Computers.Permissions;
-using HackLinks_Server.Util;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using HackLinks_Server.Computers.Permissions;
+using HackLinks_Server.Util;
 
-namespace HackLinks_Server.Computers.Filesystems
+namespace HackLinks_Server.Computers.Filesystems.Temp
 {
-    /// <summary>
-    /// Contains Files for a computer
-    /// </summary>
-    public class DiskFileSystem : ManagedFileSystem<DiskInode>
+    class TempFileSystem : ManagedFileSystem<TempInode>
     {
-        public DiskFileSystem(int computerId, ulong id) : base(computerId, id)
+        public TempFileSystem(int computerId, ulong id) : base(computerId, id)
         {
         }
 
@@ -37,44 +37,45 @@ namespace HackLinks_Server.Computers.Filesystems
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
             using (Stream stream = GetFileContent(parent))
             {
+                stream.SetLength(0);
                 stream.Write(bytes, 0, bytes.Length);
             }
-            Server.Instance.DatabaseLink.UnlinkFile(ComputerID, parent, fileHandle);
         }
 
         public override FileHandle CreateFile(FileHandle directory, string name, Permission permissions, int ownerId, Group group, FileType type)
         {
             int mode = ((int)type << 9) | (int)permissions;
-            DiskInode inode = CreateFile(mode);
+            Inode inode = CreateFile(mode);
             inode.OwnerId = ownerId;
             inode.Group = group;
-
-            Server.Instance.DatabaseLink.CreateFile(ComputerID, ID, inode.ID, 0, mode, (int)group, ownerId, null);
 
             LinkFile(directory, name, ID, inode.ID);
 
             return new FileHandle(ID, inode.ID, directory.FilePath.Path, name);
         }
 
-        public override FileHandle LinkFile(FileHandle directory, string name,ulong filesystemId, ulong inodeID)
+        public override FileHandle LinkFile(FileHandle directory, string name, ulong filesystemId, ulong inodeID)
         {
             List<FileUtil.DirRecord> directoryRecords = FileUtil.GetDirectoryList(this, directory);
+
             foreach (FileUtil.DirRecord rec in directoryRecords)
             {
                 if (rec.name.Equals(name))
                 {
+                    // file exists return null
                     return null;
                 }
             }
+
             directoryRecords.Add(new FileUtil.DirRecord(filesystemId, inodeID, name));
+
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
             using (Stream stream = GetFileContent(directory))
             {
                 stream.Write(bytes, 0, bytes.Length);
             }
-            Server.Instance.DatabaseLink.LinkFile(ComputerID, ID, inodeID);
+
             return new FileHandle(filesystemId, inodeID, directory.FilePath.Path, name);
         }
-
     }
 }

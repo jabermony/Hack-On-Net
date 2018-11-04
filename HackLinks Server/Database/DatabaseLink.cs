@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using HackLinks_Server.Util;
 using HackLinks_Server.Computers.Filesystems;
 using System.Data;
+using HackLinks_Server.Computers.Filesystems.Device;
 
 namespace HackLinks_Server.Database
 {

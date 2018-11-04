@@ -29,9 +29,9 @@ namespace HackLinks_Server.Computers.Filesystems
         /// </summary>
         public string Name { get; }
 
-        public FileHandle(Filesystem filesystem, ulong inode, List<FileHandle> path, string name)
+        public FileHandle(ulong FilesystemId, ulong inode, List<FileHandle> path, string name)
         {
-            FilesystemId = filesystem.ID;
+            this.FilesystemId = FilesystemId;
             Inode = inode;
             Name = name;
             FilePath = new FilePath(path, this);

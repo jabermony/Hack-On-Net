@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HackLinks_Server.Computers.Filesystems.Device;
+using HackLinks_Server.Computers.Filesystems.Temp;
 
 namespace HackLinks_Server.Computers
 {
@@ -47,11 +49,28 @@ namespace HackLinks_Server.Computers
 
         public Node()
         {
-             Kernel = new Kernel(this);
+            Kernel = new Kernel(this);
         }
 
         public void Init()
         {
+            TempFileSystem tempFileSystem = new TempFileSystem(id, 1);
+            Filesystems[1] = tempFileSystem;
+            DeviceFileSystem deviceSystem = new DeviceFileSystem(id, 2);
+            //deviceSystem.RegisterNewFile(new DeviceInode(deviceSystem, 1, DBUtil.GenerateMode(FileType.Regular, Permission.A_All)));
+            Filesystems[2] = deviceSystem;
+
+            // This call will return null if our file already exists
+            tempFileSystem.RegisterNewFile(new TempInode(tempFileSystem, 1, DBUtil.GenerateMode(FileType.Directory, Permission.A_All)));
+            Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "tmp", 1, 1);
+            TempInode dev = new TempInode(tempFileSystem, 2, DBUtil.GenerateMode(FileType.Directory, Permission.O_All | Permission.A_Execute | Permission.A_Read))
+            {
+                OwnerId = 0,
+                Group = Group.ROOT
+            };
+            tempFileSystem.RegisterNewFile(dev);
+            Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "dev", 1, 2);
+
             initProcess = new Init(1, this, new Credentials(0, Group.ROOT));
             RegisterProcess(initProcess);
             initProcess.Run("");

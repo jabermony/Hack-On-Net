@@ -27,7 +27,7 @@ namespace HackLinks_Server.Computers.Processes
             get => daemonCommands;
         }
 
-        public DNSClient(Session session, Daemon daemon, int pid, Printer printer, Node computer, Credentials credentials) : base(session, daemon, pid, printer, computer, credentials)
+        public DNSClient(Session session, Daemon daemon, int pid, Node computer, Credentials credentials) : base(session, daemon, pid, computer, credentials)
         {
 
         }
@@ -41,7 +41,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (command.Length < 2)
                 {
-                    process.Print("Usage : dns [lookup/rlookup] [URL/IP]");
+                    process.Kernel.Print(process, "Usage : dns [lookup/rlookup] [URL/IP]");
                     return true;
                 }
                 var cmdArgs = command[1].Split(' ');
@@ -49,37 +49,37 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     if (PermissionHelper.CheckCredentials(process.Credentials, Group.ADMIN))
                     {
-                        process.Print("Permission denied");
+                        process.Kernel.Print(process, "Permission denied");
                         return true;
                     }
                     daemon.LoadEntries();
-                    process.Print("Successfully updated the DNS.");
+                    process.Kernel.Print(process, "Successfully updated the DNS.");
                     return true;
                 }
                 if (cmdArgs[0] == "lookup")
                 {
                     var url = cmdArgs[1];
                     var ip = daemon.LookUp(url);
-                    process.Print("Result IP : " + (ip ?? "unknown"));
+                    process.Kernel.Print(process, "Result IP : " + (ip ?? "unknown"));
                     return true;
                 }
                 if (cmdArgs[0] == "rlookup")
                 {
                     var ip = cmdArgs[1];
                     var url = daemon.RLookUp(ip);
-                    process.Print("Result URL : " + (url ?? "unknown"));
+                    process.Kernel.Print(process, "Result URL : " + (url ?? "unknown"));
                     return true;
                 }
                 if (cmdArgs[0] == "assign")
                 {
                     if (PermissionHelper.CheckCredentials(process.Credentials, Group.ADMIN))
                     {
-                        process.Print("Insufficient permission.");
+                        process.Kernel.Print(process, "Insufficient permission.");
                         return true;
                     }
                     if (cmdArgs.Length <= 2)
                     {
-                        process.Print("Missing arguments.\nProper usage: dns assign [IP] [URL]");
+                        process.Kernel.Print(process, "Missing arguments.\nProper usage: dns assign [IP] [URL]");
                         return true;
                     }
                     File dnsFolder = process.Kernel.GetFile(process, "/dns");
@@ -106,16 +106,16 @@ namespace HackLinks_Server.Computers.Processes
                     {
                         if (entry.Url == cmdArgs[2])
                         {
-                            process.Print("The provided URL is already assigned an IP address.");
+                            process.Kernel.Print(process, "The provided URL is already assigned an IP address.");
                             return true;
                         }
                     }
                     dnsEntries.SetContent(dnsEntries.GetContent() + '\n' + cmdArgs[1] + '=' + cmdArgs[2]);
                     daemon.LoadEntries();
-                    process.Print("Content appended.");
+                    process.Kernel.Print(process, "Content appended.");
                     return true;
                 }
-                process.Print("Usage : dns [lookup/rlookup] [URL/IP]");
+                process.Kernel.Print(process, "Usage : dns [lookup/rlookup] [URL/IP]");
                 return true;
             }
             return false;

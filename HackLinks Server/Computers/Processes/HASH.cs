@@ -19,7 +19,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public override SortedDictionary<string, Tuple<string, Command>> Commands => commands;
 
-        public HASH(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public HASH(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
             // left empty because we don't do anything special to initalize this Process
         }
@@ -68,7 +68,7 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     return;
                 }
-                Print($"{inputData.Split(new char[] { ' ' }, 2)[0]}: command not found");
+                Kernel.Print(this, $"{inputData.Split(new char[] { ' ' }, 2)[0]}: command not found");
             }
         }
 
@@ -76,7 +76,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length != 2)
             {
-                process.Print("Usage : daemon [name of daemon]");
+                process.Kernel.Print(process, "Usage : daemon [name of daemon]");
                 return true;
             }
             string target = command[1];
@@ -90,7 +90,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : cd [folder]");
+                process.Kernel.Print(process, "Usage : cd [folder]");
                 return true;
             }
             if (command[1] == "..")
@@ -102,7 +102,7 @@ namespace HackLinks_Server.Computers.Processes
                 }
                 else
                 {
-                    process.Print("Invalid operation.");
+                    process.Kernel.Print(process, "Invalid operation.");
                     return true;
                 }
             }
@@ -113,12 +113,12 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (!file.Type.Equals(FileType.Directory))
                 {
-                    process.Print("You cannot change active directory to a file.");
+                    process.Kernel.Print(process, "You cannot change active directory to a file.");
                     return true;
                 }
                 if (!file.HasExecutePermission(process.Credentials))
                 {
-                    process.Print("You do not have permission to do this. You must have execute permission to access a directory.");
+                    process.Kernel.Print(process, "You do not have permission to do this. You must have execute permission to access a directory.");
                     return true;
                 }
 
@@ -126,7 +126,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Kernel.CD(process, file.Name);
                 return true;
             }
-            process.Print("No such folder.");
+            process.Kernel.Print(process, "No such folder.");
             return true;
         }
     }

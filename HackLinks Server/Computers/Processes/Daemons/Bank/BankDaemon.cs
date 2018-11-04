@@ -26,7 +26,7 @@ namespace HackLinks_Server.Computers.Processes.Daemons
             return DaemonType.BANK;
         }
 
-        public BankDaemon(int pid, Printer printer, Node computer, Credentials credentials) : base(pid, printer, computer, credentials)
+        public BankDaemon(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
 
         }
@@ -66,13 +66,13 @@ namespace HackLinks_Server.Computers.Processes.Daemons
             var bankFolder = Kernel.GetFile(process, "/bank");
             if (bankFolder == null || !bankFolder.Type.Equals(FileType.Directory))
             {
-                process.Print("No bank daemon folder was found ! (Contact the admin of this node to create one as the bank is useless without one)");
+                process.Kernel.Print(process, "No bank daemon folder was found ! (Contact the admin of this node to create one as the bank is useless without one)");
                 return false;
             }
             var accountFile = Kernel.GetFile(process, "/bank/accounts.db");
             if (accountFile == null)
             {
-                process.Print("No accounts file was found ! (Contact the admin of this node to create one as the bank is useless without one)");
+                process.Kernel.Print(process, "No accounts file was found ! (Contact the admin of this node to create one as the bank is useless without one)");
                 return false;
             }
 

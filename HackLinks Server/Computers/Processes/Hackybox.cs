@@ -34,7 +34,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public override SortedDictionary<string, Tuple<string, Command>> Commands => commands;
 
-        public Hackybox(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public Hackybox(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
         }
 
@@ -44,7 +44,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 return process.RunCommand(command[1]);
             }
-            process.Print(commands[command[0]].Item1);
+            process.Kernel.Print(process, commands[command[0]].Item1);
             return true;
         }
 
@@ -52,13 +52,13 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : fedit [append/line/remove/insert/help]");
+                process.Kernel.Print(process, "Usage : fedit [append/line/remove/insert/help]");
                 return true;
             }
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs[0] == "help")
             {
-                process.Print("fedit [append] [file] [text] - Appends 'text' in a new line, at the bottom of the file.\n" +
+                process.Kernel.Print(process, "fedit [append] [file] [text] - Appends 'text' in a new line, at the bottom of the file.\n" +
                     "fedit [line] [file] [n] [text] - Changes content of line 'n' to 'text'.\n" +
                     "fedit [remove] [file] [n] - Removes line 'n' of the file.\n" +
                     "fedit [insert] [file] [n] [text] - Insert a new line containing 'text' in the 'n' line number.");
@@ -68,113 +68,113 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (cmdArgs.Length < 3)
                 {
-                    process.Print("Missing arguments");
+                    process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
                 var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
                 if (file == null)
                 {
-                    process.Print("File " + cmdArgs[1] + " not found.");
+                    process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
                     return true;
                 }
                 if (!file.HasWritePermission(process.Credentials))
                 {
-                    process.Print("Permission denied.");
+                    process.Kernel.Print(process, "Permission denied.");
                     return true;
                 }
                 // TODO use file streams instead ? 
                 file.SetContent(file.GetContent() + '\n' + cmdArgs.JoinWords(" ", 2));
-                process.Print("Content appended.");
+                process.Kernel.Print(process, "Content appended.");
                 return true;
             }
             if (cmdArgs[0] == "line")
             {
                 if (cmdArgs.Length < 3)
                 {
-                    process.Print("Missing arguments");
+                    process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
                 var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
                 if (file == null)
                 {
-                    process.Print("File " + cmdArgs[1] + " not found.");
+                    process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
                     return true;
                 }
                 if (!file.HasWritePermission(process.Credentials))
                 {
-                    process.Print("Permission denied.");
+                    process.Kernel.Print(process, "Permission denied.");
                     return true;
                 }
                 int n;
                 if (!int.TryParse(cmdArgs[2], out n))
                 {
-                    process.Print("Wrong line number.");
+                    process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
                 int nth = file.GetContent().GetNthOccurence(n, '\n');
                 string content = file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth);
                 file.SetContent(content.Insert(nth, '\n' + cmdArgs.JoinWords(" ", 3)));
-                process.Print("Line edited.");
+                process.Kernel.Print(process, "Line edited.");
                 return true;
             }
             if (cmdArgs[0] == "remove")
             {
                 if (cmdArgs.Length < 3)
                 {
-                    process.Print("Missing arguments");
+                    process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
                 var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
                 if (file == null)
                 {
-                    process.Print("File " + cmdArgs[1] + " not found.");
+                    process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
                     return true;
                 }
                 if (!file.HasWritePermission(process.Credentials))
                 {
-                    process.Print("Permission denied.");
+                    process.Kernel.Print(process, "Permission denied.");
                     return true;
                 }
                 int n;
                 if (!int.TryParse(cmdArgs[2], out n))
                 {
-                    process.Print("Wrong line number.");
+                    process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
                 var nth = file.GetContent().GetNthOccurence(n, '\n');
                 file.SetContent(file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth));
-                process.Print("Line removed");
+                process.Kernel.Print(process, "Line removed");
                 return true;
             }
             if (cmdArgs[0] == "insert")
             {
                 if (cmdArgs.Length < 3)
                 {
-                    process.Print("Missing arguments");
+                    process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
                 var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
                 if (file == null)
                 {
-                    process.Print("File " + cmdArgs[1] + " not found.");
+                    process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
                     return true;
                 }
                 if (!file.HasWritePermission(process.Credentials))
                 {
-                    process.Print("Permission denied.");
+                    process.Kernel.Print(process, "Permission denied.");
                     return true;
                 }
                 int n;
                 if (!int.TryParse(cmdArgs[2], out n))
                 {
-                    process.Print("Wrong line number.");
+                    process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
                 file.SetContent(file.GetContent().Insert(file.GetContent().GetNthOccurence(n, '\n'), '\n' + cmdArgs.JoinWords(" ", 3)));
-                process.Print("Content inserted");
+                process.Kernel.Print(process, "Content inserted");
                 return true;
             }
-            process.Print("Usage : fedit [append/line/remove/insert/help]");
+            process.Kernel.Print(process, "Usage : fedit [append/line/remove/insert/help]");
             return true;
         }
 
@@ -182,30 +182,30 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : view [file]");
+                process.Kernel.Print(process, "Usage : view [file]");
                 return true;
             }
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length != 1)
             {
-                process.Print("Usage : view [file]");
+                process.Kernel.Print(process, "Usage : view [file]");
                 return true;
             }
             var activeDirectory = process.ActiveDirectory;
             var file = activeDirectory.GetFile(cmdArgs[0]);
             if (file == null)
             {
-                process.Print("File " + cmdArgs[0] + " not found.");
+                process.Kernel.Print(process, "File " + cmdArgs[0] + " not found.");
                 return true;
             }
             if (file.Type.Equals(FileType.Directory))
             {
-                process.Print("You cannot display a directory.");
+                process.Kernel.Print(process, "You cannot display a directory.");
                 return true;
             }
             if (!file.HasReadPermission(process.Credentials))
             {
-                process.Print("Permission denied.");
+                process.Kernel.Print(process, "Permission denied.");
                 return true;
             }
 
@@ -217,7 +217,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print(commands[command[0]].Item1);
+                process.Kernel.Print(process, commands[command[0]].Item1);
                 return true;
             }
 
@@ -225,7 +225,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if (cmdArgs.Length < 2)
             {
-                process.Print(commands[command[0]].Item1);
+                process.Kernel.Print(process, commands[command[0]].Item1);
                 return true;
             }
             int pos = cmdArgs[1].IndexOf(':');
@@ -240,7 +240,7 @@ namespace HackLinks_Server.Computers.Processes
                 group = Permissions.PermissionHelper.GetGroupFromString(groupString);
                 if (group == Permissions.Group.INVALID)
                 {
-                    process.Print($"Invalid group '{groupString}' specified");
+                    process.Kernel.Print(process, $"Invalid group '{groupString}' specified");
                     return true;
                 }
             }
@@ -252,7 +252,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if (!process.Kernel.HasUser(username))
             {
-                process.Print($"User {username} does not exist!");
+                process.Kernel.Print(process, $"User {username} does not exist!");
                 return true;
             }
 
@@ -263,7 +263,7 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     if (file.OwnerId != process.Credentials.UserId)
                     {
-                        process.Print("Permission denied. Only the current file owner may change file permissions.");
+                        process.Kernel.Print(process, "Permission denied. Only the current file owner may change file permissions.");
                         return true;
                     }
                     file.SetOwnerId(process.Kernel.GetUserId(username));
@@ -276,7 +276,7 @@ namespace HackLinks_Server.Computers.Processes
                     {
                         message = $"File {file.Name} owner changed to {username}";
                     }
-                    process.Print(message);
+                    process.Kernel.Print(process, message);
                     return true;
                 }
             }
@@ -288,13 +288,13 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print(commands[command[0]].Item1);
+                process.Kernel.Print(process, commands[command[0]].Item1);
                 return true;
             }
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length != 2)
             {
-                process.Print(commands[command[0]].Item1);
+                process.Kernel.Print(process, commands[command[0]].Item1);
                 return true;
             }
             var activePrivs = process.Credentials.Groups;
@@ -306,24 +306,24 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     if (process.Credentials.UserId != fileC.OwnerId)
                     {
-                        process.Print("Permission denied.");
+                        process.Kernel.Print(process, "Permission denied.");
                         return true;
                     }
 
                     if (!Permissions.PermissionHelper.ApplyModifiers(cmdArgs[0], fileC.PermissionValue, out int outValue))
                     {
-                        process.Print($"Invalid mode '{cmdArgs[0]}'\r\nUsage : chmod [permissions] [file]");
+                        process.Kernel.Print(process, $"Invalid mode '{cmdArgs[0]}'\r\nUsage : chmod [permissions] [file]");
                         return true;
                     }
 
                     process.Kernel.SetFilePermissionValue(process, fileC.FileHandle, outValue);
 
-                    process.Print($"File {fileC.Name} permissions changed. to {fileC.PermissionValue}");
+                    process.Kernel.Print(process, $"File {fileC.Name} permissions changed. to {fileC.PermissionValue}");
 
                     return true;
                 }
             }
-            process.Print("File " + cmdArgs[1] + " was not found.");
+            process.Kernel.Print(process, "File " + cmdArgs[1] + " was not found.");
             return true;
         }
 
@@ -331,13 +331,13 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : login [username] [password]");
+                process.Kernel.Print(process, "Usage : login [username] [password]");
                 return true;
             }
             var args = command[1].Split(' ');
             if (args.Length < 2)
             {
-                process.Print("Usage : login [username] [password]");
+                process.Kernel.Print(process, "Usage : login [username] [password]");
                 return true;
             }
             process.Kernel.Login(process, args[0], args[1]);
@@ -350,16 +350,16 @@ namespace HackLinks_Server.Computers.Processes
             //var compManager = client.server.GetComputerManager();
             //if (command.Length < 2)
             //{
-            //    process.Print("Usage : ping [ip]");
+            //    process.Kernel.Print(process, "Usage : ping [ip]");
             //    return true;
             //}
             //var connectingToNode = compManager.GetNodeByIp(command[1]);
             //if (connectingToNode == null)
             //{
-            //    process.Print("Ping on " + command[1] + " timeout.");
+            //    process.Kernel.Print(process, "Ping on " + command[1] + " timeout.");
             //    return true;
             //}
-            //process.Print("Ping on " + command[1] + " success.");
+            //process.Kernel.Print(process, "Ping on " + command[1] + " success.");
             return true;
         }
 
@@ -367,7 +367,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : command [ip]");
+                process.Kernel.Print(process, "Usage : command [ip]");
                 return true;
             }
 
@@ -392,11 +392,11 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     if (command[1] == file.Name)
                     {
-                        process.Print($"{file.Type} {file.Name} > Owner '{process.Kernel.GetUsername(file.OwnerId)}' Group '{file.Group}' Permissions '{PermissionHelper.PermissionToDisplayString(file.PermissionValue)}'");
+                        process.Kernel.Print(process, $"{file.Type} {file.Name} > Owner '{process.Kernel.GetUsername(file.OwnerId)}' Group '{file.Group}' Permissions '{PermissionHelper.PermissionToDisplayString(file.PermissionValue)}'");
                         return true;
                     }
                 }
-                process.Print("File " + command[1] + " not found.");
+                process.Kernel.Print(process, "File " + command[1] + " not found.");
                 return true;
             }
             else
@@ -425,7 +425,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : touch [fileName]");
+                process.Kernel.Print(process, "Usage : touch [fileName]");
             }
 
             var activeDirectory = process.ActiveDirectory;
@@ -433,19 +433,19 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (fileC.Name == command[1])
                 {
-                    process.Print("File " + command[1] + " touched.");
+                    process.Kernel.Print(process, "File " + command[1] + " touched.");
                     return true;
                 }
             }
             if (!activeDirectory.HasWritePermission(process.Credentials))
             {
-                process.Print("Permission denied.");
+                process.Kernel.Print(process, "Permission denied.");
                 return true;
             }
 
             File file = process.Kernel.CreateFile(process, activeDirectory, command[1], Permission.A_All, process.Credentials.UserId, process.Credentials.Group);
 
-            process.Print("File " + command[1]);
+            process.Kernel.Print(process, "File " + command[1]);
             return true;
         }
 
@@ -453,7 +453,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : rm [fileName]");
+                process.Kernel.Print(process, "Usage : rm [fileName]");
             }
             var activeDirectory = process.ActiveDirectory;
             foreach (var file in activeDirectory.GetChildren())
@@ -462,10 +462,10 @@ namespace HackLinks_Server.Computers.Processes
                 {
                     if (!file.HasWritePermission(process.Credentials))
                     {
-                        process.Print("Permission denied.");
+                        process.Kernel.Print(process, "Permission denied.");
                         return true;
                     }
-                    process.Print("File " + command[1] + " removed.");
+                    process.Kernel.Print(process, "File " + command[1] + " removed.");
 
                     process.Kernel.UnlinkFile(process, file.FileHandle);
                     return true;
@@ -474,7 +474,7 @@ namespace HackLinks_Server.Computers.Processes
 
 
 
-            process.Print("File does not exist.");
+            process.Kernel.Print(process, "File does not exist.");
             return true;
         }
 
@@ -482,7 +482,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             if (command.Length < 2)
             {
-                process.Print("Usage : mkdir [folderName]");
+                process.Kernel.Print(process, "Usage : mkdir [folderName]");
                 return true;
             }
 
@@ -491,7 +491,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (fileC.Name == command[1])
                 {
-                    process.Print("Folder " + command[1] + " already exists.");
+                    process.Kernel.Print(process, "Folder " + command[1] + " already exists.");
                     return true;
                 }
             }
@@ -500,7 +500,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if (!passed)
             {
-                process.Print("Permission denied.");
+                process.Kernel.Print(process, "Permission denied.");
                 return true;
             }
 
@@ -516,7 +516,7 @@ namespace HackLinks_Server.Computers.Processes
             command.AddRange(commandUnsplit[1].Split());
             if (command.Count < 4)
             {
-                process.Print("Usage: netmap [ip] [x] [y]");
+                process.Kernel.Print(process, "Usage: netmap [ip] [x] [y]");
                 return true;
             }
             //TODO kernel
@@ -530,7 +530,7 @@ namespace HackLinks_Server.Computers.Processes
                 command.Add("music");
                 command.AddRange(commandUnsplit[1].Split());
                 if (command.Count < 2) {
-                    process.Print("Usage: music [(nameofsong) (Note: Must be in a folder called \"HNMPMusic\" in the Mods folder as an .wav file.)]\nOR music shuffle\nOR music list");
+                    process.Kernel.Print(process, "Usage: music [(nameofsong) (Note: Must be in a folder called \"HNMPMusic\" in the Mods folder as an .wav file.)]\nOR music shuffle\nOR music list");
                     return true;
                 }
                 process.Kernel.PlayMusic(process, command[1]);

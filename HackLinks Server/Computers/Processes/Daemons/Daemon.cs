@@ -21,7 +21,7 @@ namespace HackLinks_Server.Daemons
             get;
         }
 
-        public Daemon(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public Daemon(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
             node = computer;
             OnStartUp();
@@ -76,7 +76,7 @@ namespace HackLinks_Server.Daemons
 
         public DaemonClient CreateClient(Session session, Process parent)
         {
-            return (DaemonClient)Activator.CreateInstance(ClientType, new object[] {session, this, node.NextPID, parent.Print, session.connectedNode, parent.Credentials });
+            return (DaemonClient)Activator.CreateInstance(ClientType, new object[] {session, this, node.NextPID, session.connectedNode, parent.Credentials });
         }
     }
 }

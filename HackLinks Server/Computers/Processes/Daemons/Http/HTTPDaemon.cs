@@ -20,7 +20,7 @@ namespace HackLinks_Server.Computers.Processes.Daemons
         protected override Type ClientType => typeof(HTTPClient);
 
 
-        public HTTPDaemon(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public HTTPDaemon(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
 
         }

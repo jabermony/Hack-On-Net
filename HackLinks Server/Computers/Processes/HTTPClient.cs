@@ -26,7 +26,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public new HTTPDaemon Daemon => (HTTPDaemon) base.Daemon;
 
-        public HTTPClient(Session session, Daemon daemon, int pid, Printer printer, Node computer, Credentials credentials) : base(session, daemon, pid, printer, computer, credentials)
+        public HTTPClient(Session session, Daemon daemon, int pid, Node computer, Credentials credentials) : base(session, daemon, pid, computer, credentials)
         {
 
         }
@@ -37,7 +37,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if (arguments.Length < 2)
             {
-                process.Print("Usage : web [interface name] [arguments]");
+                process.Kernel.Print(process, "Usage : web [interface name] [arguments]");
                 return true;
             }
 

@@ -20,7 +20,7 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         protected override Type ClientType => typeof(IRCClient);
 
-        public IrcDaemon(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public IrcDaemon(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
             this.accessLevel = Group.GUEST;
         }

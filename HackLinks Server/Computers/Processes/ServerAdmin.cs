@@ -27,7 +27,7 @@ namespace HackLinks_Server.Computers.Processes
 
         private GameClient client;
 
-        public ServerAdmin(int pid, Printer printer, Node computer, Credentials credentials, GameClient client) : base(pid, printer, computer, credentials)
+        public ServerAdmin(int pid, Node computer, Credentials credentials, GameClient client) : base(pid, computer, credentials)
         {
             this.client = client;
         }
@@ -39,7 +39,7 @@ namespace HackLinks_Server.Computers.Processes
                 base.Run(command);
             } else
             {
-                Print("Unauthorized access to privilaged resources detected, halting execution");
+                Kernel.Print(this, "Unauthorized access to privilaged resources detected, halting execution");
             }
         }
 
@@ -49,7 +49,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 return process.RunCommand(command[1]);
             }
-            process.Print(commands[command[0]].Item1);
+            process.Kernel.Print(process, commands[command[0]].Item1);
             return true;
         }
 
@@ -58,24 +58,24 @@ namespace HackLinks_Server.Computers.Processes
             ServerAdmin serverAdmin = (ServerAdmin)process;
             if (command.Length != 2)
             {
-                process.Print("Usage: compile FILENAME TYPE");
+                process.Kernel.Print(process, "Usage: compile FILENAME TYPE");
                 return true;
             }
             string[] args = command[1].Split(' ');
             if(args.Length != 2)
             {
-                process.Print("Usage: compile FILENAME TYPE");
+                process.Kernel.Print(process, "Usage: compile FILENAME TYPE");
                 return true;
             }
             File file = process.ActiveDirectory.GetFile(args[0]);
             if (file == null)
             {
-                process.Print("File not found");
+                process.Kernel.Print(process, "File not found");
                 return true;
             }
             if (file.Type.Equals(FileType.Directory))
             {
-                process.Print("Invalid file, cannot be folder");
+                process.Kernel.Print(process, "Invalid file, cannot be folder");
                 return true;
             }
             serverAdmin.client.server.GetCompileManager().AddType(file.Checksum, args[1]);
@@ -179,12 +179,12 @@ namespace HackLinks_Server.Computers.Processes
 
             if (client.permissions.Contains(HackLinks_Server.Permissions.Admin) == false && client.permissions.Contains(HackLinks_Server.Permissions.Kick) == false)
             {
-                process.Print("Insufficent Privileges");
+                process.Kernel.Print(process, "Insufficent Privileges");
                 return true;
             }
             if (command.Length < 2)
             {
-                process.Print("Usage: kick [username]");
+                process.Kernel.Print(process, "Usage: kick [username]");
                 return true;
             }
             GameClient targetClient = null;
@@ -199,7 +199,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if (targetClient == null)
             {
-                process.Print("The player isn't in the server");
+                process.Kernel.Print(process, "The player isn't in the server");
                 return true;
             }
 
@@ -219,12 +219,12 @@ namespace HackLinks_Server.Computers.Processes
 
             if (client.permissions.Contains(HackLinks_Server.Permissions.Admin) == false && client.permissions.Contains(HackLinks_Server.Permissions.Ban) == false)
             {
-                process.Print("Insufficent Privileges");
+                process.Kernel.Print(process, "Insufficent Privileges");
                 return true;
             }
             if (command.Count < 3)
             {
-                process.Print("Usage: ban [username] [unban (t/f)] [permban (t/f)] [days] [hr] [mins]");
+                process.Kernel.Print(process, "Usage: ban [username] [unban (t/f)] [permban (t/f)] [days] [hr] [mins]");
                 return true;
             }
             if (command.Count < 4)
@@ -241,7 +241,7 @@ namespace HackLinks_Server.Computers.Processes
             int banExpiry = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds() + days + hours + minutes;
 
             if (!Server.Instance.DatabaseLink.SetUserBanStatus(command[1], banExpiry, false, false))
-                process.Print("The user does not exist in the user database");
+                process.Kernel.Print(process, "The user does not exist in the user database");
             return true;
         }
 

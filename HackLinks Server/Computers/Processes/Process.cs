@@ -10,8 +10,6 @@ namespace HackLinks_Server.Computers.Processes
 {
     public abstract class Process
     {
-        public delegate void Printer(string text);
-
         public enum State
         {
             New, // New and not running
@@ -84,14 +82,9 @@ namespace HackLinks_Server.Computers.Processes
         protected byte exitCode = 0;
         public byte ExitCode => exitCode;
 
-        private readonly Printer printer;
-
-        public Printer Print => printer;
-
-        public Process(int pid, Printer printer, Node node, Credentials credentials)
+        public Process(int pid, Node node, Credentials credentials)
         {
             ProcessId = pid;
-            this.printer = printer ?? delegate { };
             this.Kernel = node.Kernel;
             ActiveDirectory = Kernel.GetFile(this, "/");
             Credentials = credentials;

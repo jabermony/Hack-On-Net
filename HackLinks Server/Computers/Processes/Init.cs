@@ -8,7 +8,7 @@ namespace HackLinks_Server.Computers.Processes
 {
     class Init : Process
     {
-        public Init(int pid, Printer printer, Node computer, Credentials credentials) : base(pid, printer, computer, credentials)
+        public Init(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
         }
 

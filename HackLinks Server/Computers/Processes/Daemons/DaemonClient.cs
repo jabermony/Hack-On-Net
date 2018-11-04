@@ -16,7 +16,7 @@ namespace HackLinks_Server.Daemons
         Daemon daemon;
         public Daemon Daemon => daemon;
 
-        public DaemonClient(Session session, Daemon daemon, int pid, Printer printer, Node computer, Credentials credentials) : base(pid, printer, computer, credentials)
+        public DaemonClient(Session session, Daemon daemon, int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
             this.session = session;
             this.daemon = daemon;

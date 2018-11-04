@@ -12,7 +12,7 @@ namespace HackLinks_Server.Computers.Processes
 {
     public class ComputerAdmin : CommandProcess
     {
-        public ComputerAdmin(int pid, Printer printer, Node computer, Credentials credentials) : base(pid, printer, computer, credentials)
+        public ComputerAdmin(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
         }
 
@@ -39,13 +39,13 @@ namespace HackLinks_Server.Computers.Processes
 
             if (oldpass != account.Password)
             {
-                process.Print("The old password is invalid");
+                process.Kernel.Print(process, "The old password is invalid");
                 return true;
             }
 
             account.Password = newpass;
             account.ApplyChanges(process);
-            process.Print("Changes successfully applied");
+            process.Kernel.Print(process, "Changes successfully applied");
             return true;
 
         }
@@ -57,7 +57,7 @@ namespace HackLinks_Server.Computers.Processes
             File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
-                process.Print("You do not have the required permissions");
+                process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
             var cmdArgs = command[1].Split(' ');
@@ -66,7 +66,7 @@ namespace HackLinks_Server.Computers.Processes
             List<Account> accounts = process.Kernel.GetAccounts(process);
             if (accounts.Find(acc => acc.Username == username) == null)
             {
-                process.Print("The user \"" + username + "\" does not exists");
+                process.Kernel.Print(process, "The user \"" + username + "\" does not exists");
                 return true;
             }
 
@@ -79,7 +79,7 @@ namespace HackLinks_Server.Computers.Processes
                 case "username":
                     if (accounts.Find(acc => acc.Username == value) != null)
                     {
-                        process.Print("The user \"" + value + "\" already exists");
+                        process.Kernel.Print(process, "The user \"" + value + "\" already exists");
                         return true;
                     }
                     account.Username = value;
@@ -98,7 +98,7 @@ namespace HackLinks_Server.Computers.Processes
                     return false;
             }
             account.ApplyChanges(process);
-            process.Print("Successfully modified the account");
+            process.Kernel.Print(process, "Successfully modified the account");
             return true;
         }
 
@@ -110,7 +110,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 return process.RunCommand(command[1]);
             }
-            process.Print(commands[command[0]].Item1);
+            process.Kernel.Print(process, commands[command[0]].Item1);
             return true;
         }
         
@@ -125,19 +125,19 @@ namespace HackLinks_Server.Computers.Processes
             File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
-                process.Print("You do not have the required permissions");
+                process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
             string[] groups = groupsFile.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             List<Account> accounts = process.Kernel.GetAccounts(process);
             if (accounts.All(acc => acc.Username.ToLower() != username.ToLower()))
             {
-                process.Print("The user \"" + username + "\" does not exists");
+                process.Kernel.Print(process, "The user \"" + username + "\" does not exists");
                 return true;
             }
             if (groups.All( g => !g.StartsWith(groupname.ToLower() + ":")))
             {
-                process.Print("The group \"" + groupname + "\" does not exists");
+                process.Kernel.Print(process, "The group \"" + groupname + "\" does not exists");
                 return true;
             }
 
@@ -145,7 +145,7 @@ namespace HackLinks_Server.Computers.Processes
             Enum.TryParse(groupname, true, out Group theGroup);
             user.GroupId = (int)theGroup;
             user.ApplyChanges(process);
-            process.Print("done");
+            process.Kernel.Print(process, "done");
             return true;
         }
         
@@ -159,14 +159,14 @@ namespace HackLinks_Server.Computers.Processes
             File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
-                process.Print("You do not have the required permissions");
+                process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
             string username = cmdArgs[0];
             string password = cmdArgs[1];
             if (!Enum.TryParse(cmdArgs[2], true, out Group group))
             {
-                process.Print("The group doesn't exists !");
+                process.Kernel.Print(process, "The group doesn't exists !");
                 return true;
             }
 
@@ -182,7 +182,7 @@ namespace HackLinks_Server.Computers.Processes
 
             if(process.Kernel.GetAccounts(process).Any( acc => acc.Username == username))
             {
-                process.Print("This user already exists");
+                process.Kernel.Print(process, "This user already exists");
                 return true;
             }
 
@@ -192,14 +192,14 @@ namespace HackLinks_Server.Computers.Processes
             }
             if (process.Kernel.GetFile(process, defaultprocessPath) == null)
             {
-                process.Print("The default process's file doesn't exists !");
+                process.Kernel.Print(process, "The default process's file doesn't exists !");
                 return true;
             }
             
             Account account = new Account(username,password,group,info,homepath,defaultprocessPath, process.Kernel);
             if (system == "t") account.UserId = -3;
             account.ApplyChanges(process);
-            process.Print("The user " + username + " has succesfully been created");
+            process.Kernel.Print(process, "The user " + username + " has succesfully been created");
             return true;
         }
 
@@ -211,27 +211,27 @@ namespace HackLinks_Server.Computers.Processes
             File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
             if (!usersFile.HasReadPermission(process.Credentials))
             {
-                process.Print("You do not have the required permissions");
+                process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
             string username = cmdArgs[0];
             List<Account> accounts = process.Kernel.GetAccounts(process);
             if (accounts.Find(acc => acc.Username == username) == null)
             {
-                process.Print("The user \"" + username + "\" does not exists");
+                process.Kernel.Print(process, "The user \"" + username + "\" does not exists");
                 return true;
             }
 
             Account account = accounts.Find(acc => acc.Username == username);
-            process.Print("--------------------------------");
-            process.Print("Username : " + account.Username);
-            process.Print("UserId : " + account.UserId);
-            process.Print("Primary group : " + CultureInfo.CurrentCulture.TextInfo.ToTitleCase(account.GetGroup().ToString()) + " (" + account.GroupId + ")");
-            process.Print("Info : " + account.Info);
-            process.Print("System : " + (account.UserId < 100 ? "True" : "False"));
-            process.Print("Home directory : " + account.HomeString);
-            process.Print("Default process : " + account.DPString);
-            process.Print("--------------------------------");
+            process.Kernel.Print(process, "--------------------------------");
+            process.Kernel.Print(process, "Username : " + account.Username);
+            process.Kernel.Print(process, "UserId : " + account.UserId);
+            process.Kernel.Print(process, "Primary group : " + CultureInfo.CurrentCulture.TextInfo.ToTitleCase(account.GetGroup().ToString()) + " (" + account.GroupId + ")");
+            process.Kernel.Print(process, "Info : " + account.Info);
+            process.Kernel.Print(process, "System : " + (account.UserId < 100 ? "True" : "False"));
+            process.Kernel.Print(process, "Home directory : " + account.HomeString);
+            process.Kernel.Print(process, "Default process : " + account.DPString);
+            process.Kernel.Print(process, "--------------------------------");
             return true;
         }
 
@@ -244,21 +244,21 @@ namespace HackLinks_Server.Computers.Processes
             File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
-                process.Print("You do not have the required permissions");
+                process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
             string username = cmdArgs[0];
             List<Account> accounts = process.Kernel.GetAccounts(process);
             if (accounts.Find(acc => acc.Username == username) == null)
             {
-                process.Print("The user \"" + username + "\" does not exists");
+                process.Kernel.Print(process, "The user \"" + username + "\" does not exists");
                 return true;
             }
             
             Account account = accounts.Find(acc => acc.Username == username);
             account.Delete();
             account.ApplyChanges(process);
-            process.Print("The account \"" + account.Username + "\" has been successfully deleted");
+            process.Kernel.Print(process, "The account \"" + account.Username + "\" has been successfully deleted");
             return true;
         }
     }

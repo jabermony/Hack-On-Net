@@ -64,6 +64,11 @@ namespace HackLinks_Server.Computers
             return node.Filesystems[fileHandle.FilesystemId].GetGroup(fileHandle);
         }
 
+        public void Print(Process process, string input)
+        {
+            GetClient(process).Send(PacketType.MESSG, input);
+        }
+
         public bool SetFileGroup(Process process, FileHandle fileHandle, Group value)
         {
             // Only root can "give away" files. This is not a bug. See https://unix.stackexchange.com/questions/27350/why-cant-a-normal-user-chown-a-file

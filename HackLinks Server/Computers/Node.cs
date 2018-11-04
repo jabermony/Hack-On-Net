@@ -48,7 +48,7 @@ namespace HackLinks_Server.Computers
 
         public void Init()
         {
-            initProcess = new Init(1, null, this, new Credentials(0, Group.ROOT));
+            initProcess = new Init(1, this, new Credentials(0, Group.ROOT));
             RegisterProcess(initProcess);
             initProcess.Run("");
         }

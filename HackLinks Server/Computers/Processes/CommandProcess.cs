@@ -14,7 +14,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public abstract SortedDictionary<string, Tuple<string, Command>> Commands { get; }
 
-        public CommandProcess(int pid, Printer printer, Node computer, Credentials credentials) : base(pid,  printer, computer, credentials)
+        public CommandProcess(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
         }
 
@@ -80,7 +80,7 @@ namespace HackLinks_Server.Computers.Processes
 
             builder.Append(footer);
 
-            Print(builder.ToString());
+            Kernel.Print(this, builder.ToString());
 
             return true;
         }

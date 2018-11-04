@@ -23,7 +23,7 @@ namespace HackLinks_Server.Computers.Processes
             get => daemonCommands;
         }
 
-        public IRCClient(Session session, Daemon daemon, int pid, Printer printer, Node computer, Credentials credentials) : base(session, daemon, pid, printer, computer, credentials)
+        public IRCClient(Session session, Daemon daemon, int pid, Node computer, Credentials credentials) : base(session, daemon, pid, computer, credentials)
         {
 
         }
@@ -37,13 +37,13 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (command.Length < 2)
                 {
-                    process.Print("Usage : irc [send]");
+                    process.Kernel.Print(process, "Usage : irc [send]");
                     return true;
                 }
                 var cmdArgs = command[1].Split(' ');
                 if (cmdArgs.Length < 2)
                 {
-                    process.Print("Usage : irc [send]");
+                    process.Kernel.Print(process, "Usage : irc [send]");
                     return true;
                 }
                 if (cmdArgs[0] == "send")
@@ -54,7 +54,7 @@ namespace HackLinks_Server.Computers.Processes
                     daemon.SendMessage(new IrcMessage(process.Kernel.GetUsername(process.Credentials.UserId), text));
                     return true;
                 }
-                process.Print("Usage : irc [send]");
+                process.Kernel.Print(process, "Usage : irc [send]");
                 return true;
             }
             return false;

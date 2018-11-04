@@ -8,7 +8,7 @@ namespace HackLinks_Server.Computers.Processes
 {
     public class False : Process
     {
-        public False(int pid, Printer printer, Node computer, Credentials credentials) : base(pid, printer, computer, credentials)
+        public False(int pid, Node computer, Credentials credentials) : base(pid, computer, credentials)
         {
         }
 

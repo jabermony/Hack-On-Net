@@ -85,6 +85,11 @@ namespace HackLinks_Server.Files
             return HasPermission(PermissionClass.Read, credentials.UserId, credentials.Group);
         }
 
+        public bool HasPermission(PermissionClass value, Credentials credentials)
+        {
+            return HasPermission(value, credentials.UserId, credentials.Group);
+        }
+
         public bool HasExecutePermission(int userId, params Group[] privs)
         {
             return HasPermission(PermissionClass.Execute, userId, privs);

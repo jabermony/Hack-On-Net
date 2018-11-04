@@ -461,7 +461,7 @@ namespace HackLinks_Server.Computers.Processes
             {
                 if (file.Name == command[1])
                 {
-                    if (!file.HasWritePermission(process.Credentials))
+                    if (!file.Parent.HasPermission(PermissionClass.Execute | PermissionClass.Write, process.Credentials))
                     {
                         process.Kernel.Print(process, "Permission denied.");
                         return true;

@@ -59,7 +59,6 @@ namespace HackLinks_Server.Computers
             DeviceFileSystem deviceSystem = new DeviceFileSystem(id, 2);
             Filesystems[2] = deviceSystem;
 
-            // This call will return null if our file already exists
             tempFileSystem.RegisterNewFile(new TempInode(tempFileSystem, 1, DBUtil.GenerateMode(FileType.Directory, Permission.A_All)));
             Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "tmp", 1, 1);
             TempInode dev = new TempInode(tempFileSystem, 2, DBUtil.GenerateMode(FileType.Directory, Permission.O_All | Permission.A_Execute | Permission.A_Read))

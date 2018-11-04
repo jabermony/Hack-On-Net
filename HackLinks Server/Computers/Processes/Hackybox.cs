@@ -30,6 +30,7 @@ namespace HackLinks_Server.Computers.Processes
             { "fedit", new Tuple<string, Command>("fedit [append/line/remove/insert/help]\n     Edits the given file according to the mode used.", Fedit) },
             { "netmap", new Tuple<string, Command>("netmap [ip] [x] [y]\n    Adds a node to the network map", AddToNetMap) },
             { "music", new Tuple<string, Command>("music [(nameOfSong) OR shuffle OR list]", PlayMusic) },
+            { "ln", new Tuple<string, Command>("ln [source] [target]\n    Hard links the given file.", Link) },
         };
 
         public override SortedDictionary<string, Tuple<string, Command>> Commands => commands;
@@ -475,6 +476,34 @@ namespace HackLinks_Server.Computers.Processes
 
 
             process.Kernel.Print(process, "File does not exist.");
+            return true;
+        }
+
+        public static bool Link(CommandProcess process, string[] command)
+        {
+            if (command.Length < 2)
+            {
+                process.Kernel.Print(process, "Usage : ln [source] [target]");
+            }
+            string[] inputs = command[1].Split(' ');
+            if (inputs.Length < 2)
+            {
+                process.Kernel.Print(process, "Usage : ln [source] [target]");
+            }
+            var activeDirectory = process.ActiveDirectory;
+
+            File source = process.ActiveDirectory.GetFile(inputs[0]);
+
+            if (source != null)
+            {
+                process.Kernel.Print(process, "File " + inputs[0] + " linked to " + command[1]);
+                process.Kernel.LinkFile(process, process.ActiveDirectory.FileHandle, source.FileHandle, inputs[1]);
+                return true;
+            } else
+            {
+                process.Kernel.Print(process, "Target File does not exist.");
+            }
+
             return true;
         }
 

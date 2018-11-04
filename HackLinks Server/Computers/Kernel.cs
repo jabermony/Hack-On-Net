@@ -595,11 +595,19 @@ namespace HackLinks_Server.Computers
         //    this.logs = logs;
         }
 
+        public void LinkFile(Process process, FileHandle activeDirectory, FileHandle target, string name)
+        {
+            if (CheckPermission(activeDirectory, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
+            {
+                GetFileSystem(activeDirectory.FilesystemId).LinkFile(activeDirectory, target, name);
+            }
+        }
+
         public void UnlinkFile(Process process, FileHandle fileHandle)
         {
-            if(CheckPermission(fileHandle, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
+            if(CheckPermission(fileHandle.FilePath.Parent, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
             {
-                GetFileSystem(fileHandle.FilesystemId).UnlinkFile(fileHandle);
+                GetFileSystem(fileHandle.FilePath.Parent.FilesystemId).UnlinkFile(fileHandle);
             }
         }
 

@@ -372,11 +372,11 @@ namespace HackLinks_Server.Computers
         private Process StartProcess(Process process, string type)
         {
             Process child = GetClient(process).CreateProcess(node, type, process);
-            StartProcess(process, child);
+            SetupProcess(process, child);
             return child;
         }
 
-        public Process StartProcess(Process process, Process child)
+        private Process SetupProcess(Process process, Process child)
         {
             node.SetChildProcess(process, child);
             child.ActiveDirectory = process.ActiveDirectory;

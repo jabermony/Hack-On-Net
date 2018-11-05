@@ -286,10 +286,25 @@ namespace HackLinks_Server.Computers
         public void Connect(Process process, string host)
         {
             GameClient client = GetClient(process);
-            if (client.ActiveSession != null)
-                client.ActiveSession.DisconnectSession();
-            if (client.ActiveProcessSession != null)
-                client.ActiveProcessSession.DisconnectSession();
+            if(client != null)
+            {
+                if (client.ActiveSession != null)
+                    client.ActiveSession.DisconnectSession();
+                // TODO create device file linked to print on connect and destroy on disconnect.
+                // TODO set perms for device to client who logged in
+                // TODO WHO Owns tty after SU ?!?!?! is it transfered to new user or does it belong to the original ?
+                if (client.ActiveProcessSession != null)
+                    client.ActiveProcessSession.DisconnectSession();
+                Node connectingToNode = GetNodeByHost(client, host);
+                if (connectingToNode != null)
+                    client.ConnectTo(connectingToNode);
+                else
+                    client.Send(NetUtil.PacketType.KERNL, "connect", "fail", "0");
+            }
+        }
+
+        private Node GetNodeByHost(GameClient client, string host)
+        {
             var compManager = client.server.GetComputerManager();
             string resultIP = null;
 
@@ -319,10 +334,7 @@ namespace HackLinks_Server.Computers
                 }
             }
             var connectingToNode = compManager.GetNodeByIp(resultIP ?? host);
-            if (connectingToNode != null)
-                client.ConnectTo(connectingToNode);
-            else
-                client.Send(NetUtil.PacketType.KERNL, "connect", "fail", "0");
+            return connectingToNode;
         }
 
         /// <summary>

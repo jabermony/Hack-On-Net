@@ -52,6 +52,14 @@ namespace HackLinks_Server.Computers
             Kernel = new Kernel(this);
         }
 
+        internal ProcessSession CreateProcessSession(string type, Credentials credentials, GameClient gameClient)
+        {
+            Process process = CreateProcess(type, credentials);
+            ProcessSession session = new ProcessSession(gameClient, process);
+            processSessions.Add(session);
+            return session;
+        }
+
         public void Init()
         {
             TempFileSystem tempFileSystem = new TempFileSystem(id, 1);
@@ -74,6 +82,38 @@ namespace HackLinks_Server.Computers
             initProcess = new Init(1, this, new Credentials(0, Group.ROOT));
             RegisterProcess(initProcess);
             initProcess.Run("");
+        }
+
+        public Process CreateProcess(string type, Process parent)
+        {
+            return CreateProcess(type, parent.Credentials);
+        }
+
+        private Process CreateProcess(string type, Credentials credentials)
+        {
+            return CreateProcess(Type.GetType($"HackLinks_Server.Computers.Processes.{type}"), credentials);
+        }
+
+        private Process CreateProcess(Type type, Credentials credentials)
+        {
+            Logger.Debug(type);
+            object[] args;
+            if (type == typeof(ServerAdmin) || type.IsInstanceOfType(typeof(Daemon)))
+            {
+                args = new object[] { NextPID, this, credentials, this };
+            }
+            else
+            {
+                args = new object[] { NextPID, this, credentials };
+            }
+            Process process = (Process)Activator.CreateInstance(type, args);
+
+            if (type.IsInstanceOfType(typeof(Daemon)))
+            {
+                daemons.Add((Daemon)process);
+            }
+
+            return process;
         }
 
         public ProcessSession GetProcessSession(int processId)

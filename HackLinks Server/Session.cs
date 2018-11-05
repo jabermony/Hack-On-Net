@@ -24,12 +24,15 @@ namespace HackLinks_Server
 
         public int sessionId;
 
-        public Session(GameClient client, Node node)
+        public Session(GameClient client)
         {
-            this.connectedNode = node;
             this.owner = client;
+        }
+
+        public void Init(Node node)
+        {
             this.sessionId = GenerateSessionId(node);
-            node.sessions.Add(this);
+            this.connectedNode = node;
             SendNodeInfo();
         }
 

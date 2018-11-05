@@ -383,7 +383,7 @@ namespace HackLinks_Server.Computers
 
         private Process StartProcess(Process process, string type)
         {
-            Process child = GetClient(process).CreateProcess(node, type, process);
+            Process child = node.CreateProcess(type, process);
             SetupProcess(process, child);
             return child;
         }

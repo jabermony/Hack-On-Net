@@ -60,42 +60,15 @@ namespace HackLinks_Server
         {
             Send(PacketType.KERNL, "login", ((int)credentials.Group).ToString(), username);
 
+            if(ActiveProcessSession != null)
+            {
+                ActiveProcessSession.DisconnectSession();
+            }
             // TODO query passwd for shell
-            Process process = CreateProcess(node, "HASH", credentials);
-            ActiveSession = new Session(this, node);
-            ActiveProcessSession = new ProcessSession(this, process);
+            ActiveProcessSession = node.CreateProcessSession("HASH", credentials, this);
+            ActiveSession = new Session(this);
+            ActiveSession.Init(node);
             node.ProcessSessions.Add(ActiveProcessSession);
-        }
-
-        public Process CreateProcess(Node node, string type, Process parent)
-        {
-            return CreateProcess(node, type, parent.Credentials);
-        }
-
-        private Process CreateProcess(Node node, string type, Credentials credentials)
-        {
-            return CreateProcess(node, Type.GetType($"HackLinks_Server.Computers.Processes.{type}"), credentials);
-        }
-
-        private Process CreateProcess(Node node, Type type, Credentials credentials)
-        {
-            Logger.Debug(type);
-            object[] args;
-            if( type == typeof(ServerAdmin) || type.IsInstanceOfType(typeof(Daemon)) )
-            {
-                args = new object[] { node.NextPID, node, credentials, this };
-            } else
-            {
-                args = new object[] { node.NextPID, node, credentials };
-            }
-            Process process =  (Process)Activator.CreateInstance(type, args);
-
-            if (type.IsInstanceOfType(typeof(Daemon)))
-            {
-                node.daemons.Add((Daemon)process);
-            }
-
-            return process;
         }
 
         public void Disconnect()

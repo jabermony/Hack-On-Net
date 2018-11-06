@@ -86,7 +86,16 @@ namespace HackLinks_Server.Computers
 
         public Process CreateProcess(string type, Process parent)
         {
-            return CreateProcess(type, parent.Credentials);
+            Process child = CreateProcess(type, parent.Credentials);
+            SetupChildProcess(parent, child);
+            return child;
+        }
+
+        public Process SetupChildProcess(Process process, Process child)
+        {
+            SetChildProcess(process, child);
+            child.ActiveDirectory = process.ActiveDirectory;
+            return child;
         }
 
         private Process CreateProcess(string type, Credentials credentials)

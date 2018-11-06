@@ -383,16 +383,7 @@ namespace HackLinks_Server.Computers
 
         private Process StartProcess(Process process, string type)
         {
-            Process child = node.CreateProcess(type, process);
-            SetupProcess(process, child);
-            return child;
-        }
-
-        private Process SetupProcess(Process process, Process child)
-        {
-            node.SetChildProcess(process, child);
-            child.ActiveDirectory = process.ActiveDirectory;
-            return child;
+            return node.CreateProcess(type, process);
         }
 
         public void PlayMusic(Process process, string song)
@@ -408,7 +399,7 @@ namespace HackLinks_Server.Computers
                 if (daemon.IsOfType(target))
                 {
                     DaemonClient daemonClient = daemon.CreateClient(ActiveSession, process);
-                    SetupProcess(process, daemonClient);
+                    node.SetupChildProcess(process, daemonClient);
                     daemon.OnConnect(ActiveSession, daemonClient);
                     GetClient(process).ActiveProcessSession.AttachProcess(daemonClient);
                 }

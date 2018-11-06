@@ -185,7 +185,7 @@ namespace HackLinks_Server.Computers
             {
                 children.Add(process, new List<int>());
             }
-            parents.Add(child, process);
+            parents[child] = process;
             children[process].Add(child);
         }
 
@@ -211,7 +211,8 @@ namespace HackLinks_Server.Computers
                     // We give all the children away to init process if our process has any
                     if (children.ContainsKey(processId))
                     {
-                        foreach (int child in children[processId])
+                        List<int> oldChildren = new List<int>(children[processId]);
+                        foreach (int child in oldChildren)
                         {
                             SetChildProcess(1, child);
                         }

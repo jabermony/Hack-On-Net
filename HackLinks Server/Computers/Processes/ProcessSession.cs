@@ -33,9 +33,10 @@ namespace HackLinks_Server.Computers.Processes
             attachedProcess.WriteInput(inputData);
         }
 
-        internal void DisconnectSession()
+        public void DisconnectSession()
         {
-            throw new NotImplementedException();
+            // Tell the attachedProcess (usually Shell. That we're going away)
+            attachedProcess.Signal(Process.ProcessSignal.SIGHUP);
         }
     }
 }

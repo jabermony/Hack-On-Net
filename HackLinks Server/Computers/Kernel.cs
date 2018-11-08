@@ -84,7 +84,7 @@ namespace HackLinks_Server.Computers
 
         private GameClient GetClient(Process process)
         {
-            ProcessSession session = node.GetProcessSession(process.ProcessId) ?? null;
+            ProcessSession session = node.GetProcessSession(process.SessionId) ?? null;
             return session  != null? session.Owner : null;
         }
 

@@ -33,6 +33,7 @@ namespace HackLinks_Server
         {
             this.sessionId = GenerateSessionId(node);
             this.connectedNode = node;
+            connectedNode.AttachSession(this);
             SendNodeInfo();
         }
 
@@ -49,7 +50,7 @@ namespace HackLinks_Server
             owner.Send(PacketType.KERNL, daemonTx.ToArray());
         }
 
-        private int GenerateSessionId(Node node)
+        public static int GenerateSessionId(Node node)
         {
             List<int> sessionIds = new List<int>();
             foreach (var session in node.sessions)
@@ -72,8 +73,7 @@ namespace HackLinks_Server
         public void DisconnectSession()
         {
             ResetTrace();
-            if (this.connectedNode != null)
-                this.connectedNode.sessions.Remove(this);
+            connectedNode.DetachSession(this);
             connectedNode = null;
         }
 

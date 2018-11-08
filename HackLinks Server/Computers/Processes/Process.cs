@@ -82,6 +82,8 @@ namespace HackLinks_Server.Computers.Processes
         protected byte exitCode = 0;
         public byte ExitCode => exitCode;
 
+        public int SessionId => node.GetSessionId(ProcessId);
+
         public Process(int pid, Node node, Credentials credentials)
         {
             ProcessId = pid;

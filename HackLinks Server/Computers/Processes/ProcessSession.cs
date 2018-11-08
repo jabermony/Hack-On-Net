@@ -3,18 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static HackLinksCommon.NetUtil;
 
 namespace HackLinks_Server.Computers.Processes
 {
    public class ProcessSession
     {
         private Process attachedProcess;
-        public GameClient Owner { get; }
+        public int ID { get; private set; }
 
-        public ProcessSession(GameClient owner, Process process)
+        public GameClient Owner { get; }
+        private Node node;
+
+        public ProcessSession(Node node, GameClient owner, Process process)
         {
+            this.node = node;
             this.Owner = owner;
             this.attachedProcess = process;
+            this.ID = process.ProcessId;
         }
 
         public bool HasProcessId(int pid)
@@ -37,6 +43,15 @@ namespace HackLinks_Server.Computers.Processes
         {
             // Tell the attachedProcess (usually Shell. That we're going away)
             attachedProcess.Signal(Process.ProcessSignal.SIGHUP);
+            node.DisposeProcessSession(this);
+        }
+
+        internal void WriteOutput(Process process, string input)
+        {
+            if(process.ProcessId == attachedProcess.ProcessId)
+            {
+                Owner.Send(PacketType.MESSG, input);
+            }
         }
     }
 }

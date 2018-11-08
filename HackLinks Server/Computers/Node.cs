@@ -27,10 +27,37 @@ namespace HackLinks_Server.Computers
 
         public IDictionary<ulong,Filesystem> Filesystems { get; } = new Dictionary<ulong,Filesystem>();
 
+        public IDictionary<ulong, Filesystem> Filesystems { get; } = new Dictionary<ulong, Filesystem>();
+
+        public IDictionary<int, int> SessionIds { get; } = new Dictionary<int, int>();
         public List<Session> sessions = new List<Session>();
 
-        private List<ProcessSession> processSessions = new List<ProcessSession>();
-        public List<ProcessSession> ProcessSessions => processSessions;
+
+        internal void AttachSession(Session session)
+        {
+            TTYInode inode = new TTYInode(Filesystems[1], 1, DBUtil.GenerateMode(FileType.Regular, Permission.A_All), session.owner);
+            deviceSystem.RegisterNewFile(inode);
+            terminals.Add(inode);
+            FileHandle devfh = Filesystems[0].GetFileHandle("/dev");
+            Filesystems[devfh.FilesystemId].LinkFile(devfh, "tty"+ terminals.IndexOf(inode), Filesystems[1].ID, inode.ID);
+            sessions.Add(session);
+        }
+
+        internal void DetachSession(Session session)
+        {
+            sessions.Remove(session);
+        }
+
+        private Dictionary<int, ProcessSession> processSessions = new Dictionary<int, ProcessSession>();
+
+        internal void DisposeProcessSession(ProcessSession processSession)
+        {
+            int id = processSession.ID;
+            processSessions.Remove(id);
+            // We do this here as as Session IDs are alocated as the PID of the first process in the session but persist after the process dies.
+            // PIDs re-enter the pool after their session dies.
+            freedPIDs.Push(id);
+        }
 
         public List<Daemon> daemons = new List<Daemon>();
         public List<Log> logs = new List<Log>();
@@ -52,11 +79,12 @@ namespace HackLinks_Server.Computers
             Kernel = new Kernel(this);
         }
 
+        // TODO allow existing process to branch off into a new session
         internal ProcessSession CreateProcessSession(string type, Credentials credentials, GameClient gameClient)
         {
             Process process = CreateProcess(type, credentials);
-            ProcessSession session = new ProcessSession(gameClient, process);
-            processSessions.Add(session);
+            ProcessSession session = new ProcessSession(this, gameClient, process);
+            processSessions.Add(process.ProcessId, session);
             return session;
         }
 
@@ -76,17 +104,23 @@ namespace HackLinks_Server.Computers
             };
             tempFileSystem.RegisterNewFile(dev);
             Filesystems[0].LinkFile(Filesystems[0].GetFileHandle("/"), "dev", tempFileSystem.ID, 2);
-            deviceSystem.RegisterNewFile(new DeviceInode(deviceSystem, 1, DBUtil.GenerateMode(FileType.Regular, Permission.A_All)));
-            FileHandle devfh = Filesystems[0].GetFileHandle("/dev");
-            Filesystems[devfh.FilesystemId].LinkFile(devfh, "raw", deviceSystem.ID, 1);
+
             initProcess = new Init(1, this, new Credentials(0, Group.ROOT));
             RegisterProcess(initProcess);
+
             initProcess.Run("");
+        }
+
+        internal int GetSessionId(int processId)
+        {
+            return SessionIds[processId];
         }
 
         public Process CreateProcess(string type, Process parent)
         {
             Process child = CreateProcess(type, parent.Credentials);
+            // Set child up in the parent's session
+            SessionIds[child.ProcessId] = parent.SessionId;
             SetupChildProcess(parent, child);
             return child;
         }
@@ -121,24 +155,17 @@ namespace HackLinks_Server.Computers
             {
                 daemons.Add((Daemon)process);
             }
-
+            // Assign SessionId
+            SessionIds[process.ProcessId] = process.ProcessId;
             return process;
         }
 
         public ProcessSession GetProcessSession(int processId)
         {
-            do
+            if (SessionIds.ContainsKey(processId))
             {
-                foreach (ProcessSession session in ProcessSessions)
-                {
-                    if(session.HasProcessId(processId))
-                    {
-                        return session;
-                    }
-                }
-                processId = parents.ContainsKey(processId) ? parents[processId] : 0;
-            } while (processId != 0);
-
+                return processSessions[SessionIds[processId]];
+            }
 
             return null;
         }
@@ -207,7 +234,6 @@ namespace HackLinks_Server.Computers
                         parents.Remove(processId);
                     }
                     processes.Remove(processId);
-                    freedPIDs.Push(processId);
                     // We give all the children away to init process if our process has any
                     if (children.ContainsKey(processId))
                     {

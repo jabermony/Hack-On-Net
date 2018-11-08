@@ -65,10 +65,10 @@ namespace HackLinks_Server
                 ActiveProcessSession.DisconnectSession();
             }
             // TODO query passwd for shell
+            // TODO if we give guest a login prompt "shell" we can have interactive login as a freebie 
             ActiveProcessSession = node.CreateProcessSession("HASH", credentials, this);
             ActiveSession = new Session(this);
             ActiveSession.Init(node);
-            node.ProcessSessions.Add(ActiveProcessSession);
         }
 
         public void Disconnect()

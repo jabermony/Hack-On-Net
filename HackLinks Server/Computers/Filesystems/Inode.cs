@@ -11,6 +11,7 @@ namespace HackLinks_Server.Computers.Filesystems
     public abstract class Inode
     {
         protected Filesystem Filesystem { get; set; }
+        public ulong FileSystemId => Filesystem.ID;
 
         public ulong ID { get; private set; }
         public int ComputerID => Filesystem.ComputerID;

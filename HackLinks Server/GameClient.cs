@@ -27,6 +27,7 @@ namespace HackLinks_Server
         public string username = "";
 
         public Session ActiveSession { get; private set; }
+
         public ProcessSession ActiveProcessSession { get; private set; }
 
         public List<Permissions> permissions =  new List<Permissions>();

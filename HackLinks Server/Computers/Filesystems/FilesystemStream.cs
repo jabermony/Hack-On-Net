@@ -5,27 +5,34 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackLinks_Server.Computers.Filesystems.Temp
+namespace HackLinks_Server.Computers.Filesystems
 {
-    public class TempFileStream : Stream
+    public class FilesystemStream : Stream
     {
-        private Stream datastream;
         private bool isDisposed = false;
 
-        public TempFileStream(Stream datastream)
+        public FilesystemStream(Filesystem filesystem, FileHandle handle)
         {
-            this.datastream = datastream;
+            this.filesystem = filesystem;
+            this.handle = handle;
         }
 
-        public override bool CanRead => datastream.CanRead;
+        public override bool CanRead => true;
 
-        public override bool CanSeek => datastream.CanSeek;
+        public override bool CanSeek => true;
 
-        public override bool CanWrite => datastream.CanWrite;
+        public override bool CanWrite => true;
 
-        public override long Length => datastream.Length;
+        public override long Length => filesystem.GetFileLength(handle, ref lastError);
+
+        private Filesystem.Error lastError;
+
+        public Filesystem.Error LastError => lastError;
 
         private long position = 0;
+        private Filesystem filesystem;
+        private FileHandle handle;
+
         public override long Position
         {
             get => position;
@@ -40,8 +47,8 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
         public override int Read(byte[] buffer, int offset, int count)
         {
             CheckDisposed();
-            datastream.Position = Position;
-            int read = datastream.Read(buffer, offset, count);
+            // TODO should position really be cast to an int? probably not...
+            int read = filesystem.ReadFile(handle, buffer, offset, (int) Position, count, ref lastError);
             Position += read;
             return read;
         }
@@ -58,7 +65,7 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
                     newpos += Position;
                     break;
                 case SeekOrigin.End:
-                    newpos += datastream.Length;
+                    newpos += Length;
                     break;
             }
 
@@ -73,7 +80,7 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
         public override void SetLength(long value)
         {
             CheckDisposed();
-            datastream.SetLength(value);
+            filesystem.SetFileLength(handle, (int) value, ref lastError);
         }
 
         private void CheckDisposed()
@@ -87,8 +94,7 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
         public override void Write(byte[] buffer, int offset, int count)
         {
             CheckDisposed();
-            datastream.Position = Position;
-            datastream.Write(buffer, offset, count);
+            filesystem.WriteFile(handle, buffer, offset, (int) Position, count, ref lastError);
         }
 
         protected override void Dispose(bool disposing)

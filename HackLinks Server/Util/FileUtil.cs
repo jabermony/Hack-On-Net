@@ -30,7 +30,7 @@ namespace HackLinks_Server.Util
             List<DirRecord> recs = new List<DirRecord>();
             if (system.GetFileType(file).Equals(FileType.Directory))
             {
-                using (Stream fStream = system.GetFileContent(file))
+                using (Stream fStream = new FilesystemStream(system, file))
                 {
                     long length = fStream.Length;
                     while (fStream.Position < length)
@@ -46,28 +46,6 @@ namespace HackLinks_Server.Util
             {
                 return recs;
             }
-        }
-
-        public static List<FileHandle> GetDirectoryFileHandles(Filesystem system, FileHandle file)
-        {
-            List<FileHandle> files = new List<FileHandle>();
-            foreach(DirRecord dirRecord in GetDirectoryList(system, file)) {
-                files.Add(new FileHandle(dirRecord.filesystemId, dirRecord.inode, file.FilePath.Path, dirRecord.name));
-            }
-            return files;
-        }
-
-        public static List<Files.File> GetDirectoryListAsFiles(Process process, Filesystem system, Files.File file)
-        {
-            List<FileHandle> dirList = GetDirectoryFileHandles(system, file.FileHandle);
-            List<Files.File> children = new List<Files.File>();
-
-            foreach(FileHandle handle in dirList)
-            {
-                children.Add(new Files.File(process, handle));
-            }
-
-            return children;
         }
 
         private static DirRecord ReadDirRecord(Stream stream)

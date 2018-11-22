@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static HackLinksCommon.NetUtil;
+using HackLinks_Server.Computers.Filesystems;
 
 namespace HackLinks_Server.Computers.Processes.Daemons
 {
@@ -57,10 +58,12 @@ namespace HackLinks_Server.Computers.Processes.Daemons
         public void LoadEntries()
         {
             this.entries.Clear();
-            File entryFile = Kernel.GetFile(this, DEFAULT_CONFIG_PATH);
+            Filesystem.Error error = Filesystem.Error.None;
+            File entryFile = Kernel.GetFile(this, DEFAULT_CONFIG_PATH, FileDescriptor.Flags.Read, ref error);
+            // TODO proper handle Error rather than just dying like this
             if (entryFile == null)
                 return;
-            foreach (string line in entryFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in entryFile.GetContentString().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var data = line.Split(new char[] { ':', '=' });
                 if (data.Length < 2)

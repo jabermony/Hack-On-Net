@@ -9,22 +9,6 @@ namespace HackLinks_Server.Util
 {
     public static class PathUtil
     {
-        /// <summary>
-        /// Returns the top level filename from the given path.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public static string Basename(List<FileHandle> path)
-        {
-            if (path.Count > 0)
-            {
-                return path[path.Count - 1].Name;
-            } else
-            {
-                return "";
-            }
-        }
-
         public static string Normalize(string rawPath, string currentDirectory)
         {
             StringBuilder pathBuilder = new StringBuilder();
@@ -33,7 +17,7 @@ namespace HackLinks_Server.Util
             int tokenStart = 0;
             if (rawPath.StartsWith("/"))
             {
-                if(rawPath.Length == 1)
+                if (rawPath.Length == 1)
                 {
                     return "/";
                 }
@@ -43,18 +27,18 @@ namespace HackLinks_Server.Util
             } else
             {
                 pathBuilder.Append(currentDirectory);
-                if(!currentDirectory.EndsWith("/"))
+                if (!currentDirectory.EndsWith("/"))
                 {
                     pathBuilder.Append("/");
                 }
             }
-            while(pos < left.Length)
+            while (pos < left.Length)
             {
                 if (left[pos].Equals("."))
                 {
                     tokenStart = pos;
                     pos++;
-                } else if(left[pos].Equals("/") && pos - tokenStart > 1)
+                } else if (left[pos].Equals('/') && pos - tokenStart > 1)
                 {
                     // Fix for trailing '/' breaking path comparision
                     pathBuilder.Append(left.Substring(tokenStart, pos - tokenStart));
@@ -68,10 +52,27 @@ namespace HackLinks_Server.Util
                 {
                     pos++;
                 }
-                
+
             }
 
             return pathBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Returns the top level filename from the given path.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static string Basename(List<string> path)
+        {
+            if (path.Count > 0)
+            {
+                return path[path.Count - 1];
+            }
+            else
+            {
+                return "";
+            }
         }
 
         /// <summary>
@@ -81,7 +82,7 @@ namespace HackLinks_Server.Util
         /// <returns></returns>
         public static string Dirname(string path)
         {
-            return path.Substring(0, GetFilenameIndex(path));
+            return path.Substring(0, GetFilenameIndex(path) + 1);
         }
 
         /// <summary>
@@ -97,6 +98,39 @@ namespace HackLinks_Server.Util
                 position = path.LastIndexOf('/', position - 1);
             }
             return position;
+        }
+
+        public static List<string> GetPath(string rawPath)
+        {
+            List<string> path = new List<string>();
+
+            int next = 0;
+            int tokenStart = 0;
+            int length = rawPath.Length;
+
+            if (rawPath.StartsWith("/"))
+            {
+                next = 1;
+                tokenStart = next;
+                path.Add("/");
+                if (rawPath.Length == 1)
+                {
+                    return path;
+                }
+            }
+            while (next <= length)
+            {
+                if (next == length || rawPath[next].Equals('/'))
+                {
+                    if (next - tokenStart > 0)
+                    {
+                        path.Add(rawPath.Substring(tokenStart, (next - tokenStart)));
+                    }
+                    tokenStart = next + 1; // Skip to the next as current is a '/'
+                }
+                next++;
+            }
+            return path;
         }
     }
 }

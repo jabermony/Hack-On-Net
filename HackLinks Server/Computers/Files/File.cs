@@ -6,108 +6,127 @@ using HackLinks_Server.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace HackLinks_Server.Files
 {
     public class File
     {
-        private Kernel Kernel => process.Kernel;
-        public readonly FileHandle FileHandle;
-        private readonly Process process;
+        private Kernel Kernel { get; }
+        public readonly FileDescriptor FileDescriptor;
 
-        public string Name => FileHandle.Name;
+        public string Name => FileDescriptor.Name;
 
-        public int PermissionValue => Kernel.GetFilePermissionValue(FileHandle);
+        public Permission PermissionValue => Kernel.GetPermissions(FileDescriptor);
 
-        public int OwnerId => Kernel.GetFileOwnerId(FileHandle);
+        public int OwnerId => Kernel.GetFileOwnerId(FileDescriptor);
 
-        public Group Group => Kernel.GetFileGroup(FileHandle);
+        public Group Group => Kernel.GetFileGroup(FileDescriptor);
 
-        public File Parent => Kernel.GetParentFile(process, this);
+        public File Parent => Kernel.GetParentFile(this, ref lastError);
 
-        public FileType Type => Kernel.GetFileType(FileHandle);
+        public FileType Type => Kernel.GetFileType(FileDescriptor);
 
-        public uint Checksum => Kernel.GetFileChecksum(FileHandle);
+        public Filesystem.Error lastError = Filesystem.Error.None;
+        public Filesystem.Error LastError => LastError;
 
-        public File(Process parentProcess, FileHandle fileHandle)
+        public File(FileDescriptor fileDescriptor, Kernel kernel)
         {
-            FileHandle = fileHandle;
-            process = parentProcess;
+            FileDescriptor = fileDescriptor;
+            Kernel = kernel;
         }
 
-        public File GetFile(string name)
+        public File GetFile(string name, FileDescriptor.Flags flags)
         {
-            return Kernel.GetFileAt(process, this, name);
+            return Kernel.GetFileAt(this, name, flags, ref lastError);
         }
 
-        public string GetContent()
+        public byte[] GetContent()
         {
-            return Kernel.GetFileContent(process, FileHandle);
+            lastError = Filesystem.Error.None;
+            return Kernel.GetFileContent(FileDescriptor, ref lastError);
+        }
+
+        public string GetContentString()
+        {
+            byte[] content = GetContent();
+            if (lastError != Filesystem.Error.None)
+            {
+                return "";
+            }
+            else
+            {
+                return Encoding.UTF8.GetString(content);
+            }
         }
 
         public void SetContent(string value)
         {
-            Kernel.SetFileContent(process, FileHandle, value);
+            lastError = Filesystem.Error.None;
+            Kernel.SetContent(FileDescriptor, value, ref lastError);
         }
 
-        public List<File> GetChildren()
+        public List<FileUtil.DirRecord> GetChildren()
         {
-            return Kernel.GetChildren(process, this);
+            return Kernel.GetDirectoryList(FileDescriptor);
         }
 
-        public bool SetPermissionValue(int value)
+        public void SetPermissionValue(Permission value)
         {
-            return Kernel.SetFilePermissionValue(process, FileHandle, value);
+            lastError = Filesystem.Error.None;
+            Kernel.SetPermission(FileDescriptor, value, ref lastError);
         }
 
-        public bool SetGroup(Group value)
+        public void SetGroup(Group value)
         {
-            return Kernel.SetFileGroup(process, FileHandle, value);
+            lastError = Filesystem.Error.None;
+            Kernel.SetGroup(FileDescriptor, value, ref lastError);
         }
 
-        public bool SetOwnerId(int value)
+        public void SetOwnerId(int value)
         {
-            return Kernel.SetFileOwnerId(process, FileHandle, value);
+            lastError = Filesystem.Error.None;
+            Kernel.SetOwnerId(FileDescriptor, value, ref lastError);
         }
 
         public bool HasExecutePermission(Credentials credentials)
         {
-            return HasPermission(PermissionClass.Execute, credentials.UserId, credentials.Group);
+            return HasPermission(Permission.A_Execute, credentials.UserId, credentials.Group);
         }
 
         public bool HasWritePermission(Credentials credentials)
         {
-            return HasPermission(PermissionClass.Write, credentials.UserId, credentials.Group);
+            return HasPermission(Permission.A_Write, credentials.UserId, credentials.Group);
         }
 
         public bool HasReadPermission(Credentials credentials)
         {
-            return HasPermission(PermissionClass.Read, credentials.UserId, credentials.Group);
+            return HasPermission(Permission.A_Read, credentials.UserId, credentials.Group);
         }
 
-        public bool HasPermission(PermissionClass value, Credentials credentials)
+        public bool HasPermission(Permission value, Credentials credentials)
         {
             return HasPermission(value, credentials.UserId, credentials.Group);
         }
 
         public bool HasExecutePermission(int userId, params Group[] privs)
         {
-            return HasPermission(PermissionClass.Execute, userId, privs);
+            return HasPermission(Permission.A_Execute, userId, privs);
         }
 
         public bool HasWritePermission(int userId, params Group[] privs)
         {
-            return HasPermission(PermissionClass.Write, userId, privs);
+            return HasPermission(Permission.A_Write, userId, privs);
         }
 
         public bool HasReadPermission(int userId, params Group[] privs)
         {
-            return HasPermission(PermissionClass.Read, userId, privs);
+            return HasPermission(Permission.A_Read, userId, privs);
         }
 
-        public bool HasPermission(PermissionClass value, int userId, params Group[] privs)
+        public bool HasPermission(Permission value, int userId, params Group[] privs)
         {
-            return Kernel.CheckPermission(FileHandle, value, userId, privs);
+            return Kernel.CheckPermission(FileDescriptor, value, userId, privs);
         }
     }
 }

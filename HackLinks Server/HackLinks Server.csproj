@@ -73,17 +73,17 @@
   <ItemGroup>
     <Compile Include="Computers\Account.cs" />
     <Compile Include="Computers\CompiledFileManager.cs" />
-    <Compile Include="Computers\Filesystems\Device\DeviceFileStream.cs" />
     <Compile Include="Computers\Filesystems\Device\DeviceFileSystem.cs" />
-    <Compile Include="Computers\Filesystems\Device\DeviceInode.cs" />
-    <Compile Include="Computers\Filesystems\Disk\DBFileStream.cs" />
+    <Compile Include="Computers\Filesystems\Device\TTYInode.cs" />
     <Compile Include="Computers\Filesystems\Disk\DiskInode.cs" />
+    <Compile Include="Computers\Filesystems\FileDescriptor.cs" />
+    <Compile Include="Computers\Filesystems\FileHandle.cs" />
     <Compile Include="Computers\Filesystems\FilePath.cs" />
     <Compile Include="Computers\Filesystems\Permission.cs" />
     <Compile Include="Computers\Filesystems\FileTypes.cs" />
     <Compile Include="Computers\Filesystems\Inode.cs" />
-    <Compile Include="Computers\Filesystems\FileHandle.cs" />
     <Compile Include="Computers\Filesystems\Filesystem.cs" />
+    <Compile Include="Computers\Filesystems\FilesystemStream.cs" />
     <Compile Include="Computers\Filesystems\Temp\TempFileStream.cs" />
     <Compile Include="Computers\Filesystems\Temp\TempFileSystem.cs" />
     <Compile Include="Computers\Filesystems\Temp\TempInode.cs" />

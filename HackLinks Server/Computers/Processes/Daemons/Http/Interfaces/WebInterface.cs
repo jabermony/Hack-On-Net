@@ -50,14 +50,14 @@ namespace HackLinks_Server.Daemons.Types.Http.Interfaces
             if (!attrValues.ContainsKey("file"))
                 return null;
             var interfaceFileName = attrValues["file"];
-            var interfaceFile = pageFile.Parent.GetFile(interfaceFileName);
+            var interfaceFile = pageFile.Parent.GetFile(interfaceFileName, FileDescriptor.Flags.Read);
             if (interfaceFile == null)
                 return null;
             if (interfaceFile.Type != FileType.Regular)
                 return null;
             if (interfaceFile.HasExecutePermission(0, Computers.Permissions.Group.ROOT))
                 return null;
-            var lines = interfaceFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.None);
+            var lines = interfaceFile.GetContentString().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.None);
             string intId = lines[0];
 
             var newInterface = interfaceCreators[intId](attrValues);

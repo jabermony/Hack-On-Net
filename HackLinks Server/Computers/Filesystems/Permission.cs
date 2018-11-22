@@ -4,6 +4,7 @@ using System;
 
 namespace HackLinks_Server.Computers.Filesystems
 {
+    [Flags]
     public enum Permission
     {
         None = 0b000_000_000,
@@ -27,12 +28,5 @@ namespace HackLinks_Server.Computers.Filesystems
         A_Execute = 0b001_001_001,
         A_Write   = 0b010_010_010,
         A_Read    = 0b100_100_100,
-    }
-
-    public enum PermissionClass
-    {
-        Execute = 0b001_001_001,
-        Write =   0b010_010_010,
-        Read =    0b100_100_100,
     }
 }

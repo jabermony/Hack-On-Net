@@ -9,14 +9,14 @@ using HackLinks_Server.Util;
 
 namespace HackLinks_Server.Computers.Filesystems.Device
 {
-    class DeviceFileSystem : ManagedFileSystem<DeviceInode>
+    class DeviceFileSystem : ManagedFileSystem<TTYInode>
     {
         public DeviceFileSystem(int computerId, ulong id) : base(computerId, id)
         {
 
         }
 
-        public override void UnlinkFile(FileHandle fileHandle)
+        public override void UnlinkFile(FileHandle parent, FileHandle fileHandle)
         {
             throw new NotImplementedException();
         }

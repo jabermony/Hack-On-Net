@@ -4,18 +4,22 @@ namespace HackLinks_Server.Computers.Filesystems
 {
     public class FilePath
     {
-        private List<FileHandle> path;
-        public List<FileHandle> Path => new List<FileHandle>(path);
+        private List<string> path;
+        private string name;
 
-        public FileHandle Parent => path[path.Count > 1 ? path.Count - 2 : 0];
+        public List<string> Path => new List<string>(path);
+        public string PathStr => string.Join("/", Path);
 
-        public FilePath(List<FileHandle> path, FileHandle fileHandle)
+        public FilePath(List<string> path)
         {
-            // We create a new instance here to avoid leaking our filehandle early.
-            // Otherwise In multithreaded environments it would be possible for an acesssor of the parameter path to touch file handle before it's finished contstruction.
-            this.path = new List<FileHandle>(path)
+            this.path = new List<string>(path);
+        }
+
+        public FilePath(List<string> path, string name)
+        {
+            this.path = new List<string>(path)
             {
-                fileHandle
+                name
             };
         }
     }

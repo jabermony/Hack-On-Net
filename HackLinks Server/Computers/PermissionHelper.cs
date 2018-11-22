@@ -27,6 +27,13 @@ namespace HackLinks_Server.Computers.Permissions
             return group;
         }
 
+        public static bool ApplyModifiers(string modifer, Permission permissionValue, out Permission outValue)
+        {
+            bool ret = ApplyModifiers(modifer, (int)permissionValue, out int outInt);
+            outValue = (Permission) outInt;
+            return ret;
+        }
+
         public static bool ApplyModifiers(string modifer, int permissionValue, out int outValue)
         {
             // We've set it to an entirely new value if this matches
@@ -131,19 +138,19 @@ namespace HackLinks_Server.Computers.Permissions
         /// </summary>
         /// <param name="value">The permission as a digit calculated from <see cref="Permission"/>. To calculate the value do a bitwise OR for the value of the required.</param>
         /// <returns>True if the type would have permission to perform the operation, false otherwise</returns>
-        public static bool CheckPermission(Permission value, int permissionValue, int fileOwnerId, Group fileGroup, int userId, params Group[] privs)
+        public static bool CheckPermission(Permission value, Permission permission, int fileOwnerId, Group fileGroup, int userId, params Group[] privs)
         {
             if (fileOwnerId != userId)
             {
-                permissionValue &= ~(int)Permission.O_All;
+                permission &= ~Permission.O_All;
             }
 
             if (!privs.Contains(fileGroup))
             {
-                permissionValue &= ~(int)Permission.G_All;
+                permission &= ~Permission.G_All;
             }
 
-            return (int)value == (permissionValue & (int)value);
+            return value == (permission & value);
         }
 
         public static bool CheckCredentials(Credentials credentials, int UserId, Group targetGroup)
@@ -166,6 +173,11 @@ namespace HackLinks_Server.Computers.Permissions
                 return true;
             }
             return false;
+        }
+
+        public static string PermissionToDisplayString(Permission permissionValue)
+        {
+            return PermissionToDisplayString((int)permissionValue);
         }
 
         public static string PermissionToDisplayString(int permissionValue)

@@ -51,7 +51,7 @@ namespace HackLinks_Server.Computers.Filesystems
         /// <param name="newFile">File to register</param>
         public void RegisterNewFile(T newFile)
         {
-            Logger.Info($"{newFile.ID} Registered with id {newFile.ID}");
+            Logger.Info($"Filesystem {ID} New File Registered with id {newFile.ID}");
             fileMap[newFile.ID] = newFile;
         }
 
@@ -90,7 +90,7 @@ namespace HackLinks_Server.Computers.Filesystems
 
         private FileHandle GetRootHandle()
         {
-            return new FileHandle(ID, 1, new List<FileHandle>(), "/");
+            return new FileHandle(ID, 1, new List<string>(), "/");
         }
 
         public override FileHandle GetFileHandle(string path)
@@ -119,17 +119,17 @@ namespace HackLinks_Server.Computers.Filesystems
 
                 if (next.Equals(".."))
                 {
-                    currentDirectory = currentDirectory.FilePath.Parent;
+                    currentDirectory = GetFileHandle(PathUtil.Dirname(currentDirectory.FilePath.PathStr));
                     continue;
                 }
 
-                List<FileHandle> files = FileUtil.GetDirectoryFileHandles(this, currentDirectory);
+                List<FileUtil.DirRecord> fileRecs = FileUtil.GetDirectoryList(this, currentDirectory);
                 FileHandle nextDirectory = null;
-                foreach (FileHandle handle in files)
+                foreach (FileUtil.DirRecord rec in fileRecs)
                 {
-                    if (handle.Name.Equals(next))
+                    if (rec.name.Equals(next))
                     {
-                        nextDirectory = handle;
+                        nextDirectory = new FileHandle(rec.filesystemId, rec.inode, currentDirectory.FilePath.Path, rec.name);
                         break;
                     }
                 }
@@ -145,21 +145,16 @@ namespace HackLinks_Server.Computers.Filesystems
             return currentDirectory;
         }
 
-        public override int GetPermissions(FileHandle fileHandle)
+        public override Permission GetPermissions(FileHandle fileHandle)
         {
             Inode inode = GetInode(fileHandle);
             return inode.PermissionValue;
         }
 
-        public override void SetFilePermissions(FileHandle fileHandle, int value)
+        public override void SetFilePermissions(FileHandle fileHandle, Permission value)
         {
             Inode inode = GetInode(fileHandle);
             inode.PermissionValue = value;
-        }
-
-        public override Stream GetFileContent(FileHandle fileHandle)
-        {
-            return GetInode(fileHandle).ContentStream;
         }
 
         public override int GetOwnerId(FileHandle fileHandle)
@@ -208,6 +203,35 @@ namespace HackLinks_Server.Computers.Filesystems
         public override void LinkFile(FileHandle parent, FileHandle fileHandle, string name)
         {
             LinkFile(parent, name, fileHandle.FilesystemId, fileHandle.Inode);
+        }  
+
+        public override int GetFileLength(FileHandle handle, ref Error error)
+        {
+            Inode inode = GetInode(handle);
+            return inode.Length;
+        }
+
+        public override void SetFileLength(FileHandle handle, int length, ref Error error)
+        {
+            Inode inode = GetInode(handle);
+            inode.Length = length;
+        }
+
+        public override int ReadFile(FileHandle handle, byte[] buffer, int offset, int position, int count, ref Error error)
+        {
+            Inode inode = GetInode(handle);
+            return inode.Read(buffer, offset, position, count);
+        }
+
+        public override void WriteFile(FileHandle handle, byte[] inputBuffer, int offset, int position, int count, ref Error error)
+        {
+            Inode inode = GetInode(handle);
+            if(inode == null)
+            {
+                error = Error.No_Such_File;
+                return;
+            }
+            inode.Write(inputBuffer, offset, position, count);
         }
     }
 }

@@ -62,12 +62,14 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         public void LoadWebPages()
         {
-            File www = node.Kernel.GetFile(this, "/www");
+            Filesystem.Error error = Filesystem.Error.None;
+            File www = node.Kernel.GetFile(this, "/www", FileDescriptor.Flags.Read_Write, ref error);
             if (www == null || !www.Type.Equals(FileType.Directory))
                 return;
-            foreach(File file in www.GetChildren())
+            foreach(Util.FileUtil.DirRecord rec in www.GetChildren())
             {
-                string content = file.GetContent();
+                File file = www.GetFile(rec.name, FileDescriptor.Flags.Read);
+                string content = file.GetContentString();
                 if (content == null)
                     continue;
                 WebPage newPage = WebPage.ParseFromFile(file);

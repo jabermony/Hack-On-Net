@@ -51,6 +51,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool Fedit(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, "Usage : fedit [append/line/remove/insert/help]");
@@ -72,7 +73,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
-                var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
+                var file = process.ActiveDirectory.GetFile(cmdArgs[1], FileDescriptor.Flags.Read_Write);
                 if (file == null)
                 {
                     process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
@@ -84,7 +85,7 @@ namespace HackLinks_Server.Computers.Processes
                     return true;
                 }
                 // TODO use file streams instead ? 
-                file.SetContent(file.GetContent() + '\n' + cmdArgs.JoinWords(" ", 2));
+                file.SetContent(file.GetContentString() + '\n' + cmdArgs.JoinWords(" ", 2));
                 process.Kernel.Print(process, "Content appended.");
                 return true;
             }
@@ -95,7 +96,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
-                var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
+                var file = process.ActiveDirectory.GetFile(cmdArgs[1], FileDescriptor.Flags.Read_Write);
                 if (file == null)
                 {
                     process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
@@ -112,8 +113,8 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
-                int nth = file.GetContent().GetNthOccurence(n, '\n');
-                string content = file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth);
+                int nth = file.GetContentString().GetNthOccurence(n, '\n');
+                string content = file.GetContentString().Remove(nth, file.GetContentString().GetNthOccurence(n + 1, '\n') - nth);
                 file.SetContent(content.Insert(nth, '\n' + cmdArgs.JoinWords(" ", 3)));
                 process.Kernel.Print(process, "Line edited.");
                 return true;
@@ -125,7 +126,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
-                var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
+                var file = process.ActiveDirectory.GetFile(cmdArgs[1], FileDescriptor.Flags.Read_Write);
                 if (file == null)
                 {
                     process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
@@ -142,8 +143,8 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
-                var nth = file.GetContent().GetNthOccurence(n, '\n');
-                file.SetContent(file.GetContent().Remove(nth, file.GetContent().GetNthOccurence(n + 1, '\n') - nth));
+                var nth = file.GetContentString().GetNthOccurence(n, '\n');
+                file.SetContent(file.GetContentString().Remove(nth, file.GetContentString().GetNthOccurence(n + 1, '\n') - nth));
                 process.Kernel.Print(process, "Line removed");
                 return true;
             }
@@ -154,7 +155,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Missing arguments");
                     return true;
                 }
-                var file = process.ActiveDirectory.GetFile(cmdArgs[1]);
+                var file = process.ActiveDirectory.GetFile(cmdArgs[1], FileDescriptor.Flags.Read_Write);
                 if (file == null)
                 {
                     process.Kernel.Print(process, "File " + cmdArgs[1] + " not found.");
@@ -171,7 +172,7 @@ namespace HackLinks_Server.Computers.Processes
                     process.Kernel.Print(process, "Wrong line number.");
                     return true;
                 }
-                file.SetContent(file.GetContent().Insert(file.GetContent().GetNthOccurence(n, '\n'), '\n' + cmdArgs.JoinWords(" ", 3)));
+                file.SetContent(file.GetContentString().Insert(file.GetContentString().GetNthOccurence(n, '\n'), '\n' + cmdArgs.JoinWords(" ", 3)));
                 process.Kernel.Print(process, "Content inserted");
                 return true;
             }
@@ -193,7 +194,7 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
             var activeDirectory = process.ActiveDirectory;
-            var file = activeDirectory.GetFile(cmdArgs[0]);
+            var file = activeDirectory.GetFile(cmdArgs[0], FileDescriptor.Flags.Read);
             if (file == null)
             {
                 process.Kernel.Print(process, "File " + cmdArgs[0] + " not found.");
@@ -210,12 +211,14 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            process.Kernel.Display(process, "view", file.Name, file.GetContent());
+            process.Kernel.Display(process, "view", file.Name, file.GetContentString());
             return true;
         }
 
         public static bool ChOwn(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
+
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, commands[command[0]].Item1);
@@ -258,28 +261,28 @@ namespace HackLinks_Server.Computers.Processes
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var file in activeDirectory.GetChildren())
+
+            File targ = process.Kernel.GetFileAt(activeDirectory, cmdArgs[0], FileDescriptor.Flags.Write, ref error);
+            if ((error & Filesystem.Error.Permission_Denied) == Filesystem.Error.Permission_Denied)
             {
-                if (file.Name == cmdArgs[0])
+                process.Kernel.Print(process, "Permission denied.");
+                return true;
+            }
+
+            if (targ != null)
+            {
+                process.Kernel.SetOwnerId(targ.FileDescriptor, process.Kernel.GetUserId(username), ref error);
+                string message;
+                if (group.HasValue)
                 {
-                    if (file.OwnerId != process.Credentials.UserId)
-                    {
-                        process.Kernel.Print(process, "Permission denied. Only the current file owner may change file permissions.");
-                        return true;
-                    }
-                    file.SetOwnerId(process.Kernel.GetUserId(username));
-                    string message;
-                    if (group.HasValue)
-                    {
-                        message = $"File {file.Name} owner changed to {username} and group set to {group}";
-                    }
-                    else
-                    {
-                        message = $"File {file.Name} owner changed to {username}";
-                    }
-                    process.Kernel.Print(process, message);
-                    return true;
+                    message = $"File {targ.Name} owner changed to {username} and group set to {group}";
                 }
+                else
+                {
+                    message = $"File {targ.Name} owner changed to {username}";
+                }
+                process.Kernel.Print(process, message);
+                return true;
             }
 
             return true;
@@ -287,6 +290,8 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool ChMod(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
+
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, commands[command[0]].Item1);
@@ -301,23 +306,24 @@ namespace HackLinks_Server.Computers.Processes
             var activePrivs = process.Credentials.Groups;
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.GetChildren())
+
+            FileDescriptor targ = process.Kernel.OpenAt(activeDirectory.FileDescriptor, cmdArgs[1], FileDescriptor.Flags.Write, Permission.None, ref error);
+            if ((error & Filesystem.Error.Permission_Denied) == Filesystem.Error.Permission_Denied)
             {
-                if (fileC.Name == cmdArgs[1])
+                process.Kernel.Print(process, "Permission denied.");
+                return true;
+            }
+
+            if (targ != null)
+            {
+                File fileC = new File(targ, process.Kernel);
+                if (!Permissions.PermissionHelper.ApplyModifiers(cmdArgs[0], fileC.PermissionValue, out Permission outValue))
                 {
-                    if (process.Credentials.UserId != fileC.OwnerId)
-                    {
-                        process.Kernel.Print(process, "Permission denied.");
-                        return true;
-                    }
-
-                    if (!Permissions.PermissionHelper.ApplyModifiers(cmdArgs[0], fileC.PermissionValue, out int outValue))
-                    {
-                        process.Kernel.Print(process, $"Invalid mode '{cmdArgs[0]}'\r\nUsage : chmod [permissions] [file]");
-                        return true;
-                    }
-
-                    process.Kernel.SetFilePermissionValue(process, fileC.FileHandle, outValue);
+                    process.Kernel.Print(process, $"Invalid mode '{cmdArgs[0]}'\r\nUsage : chmod [permissions] [file]");
+                    return true;
+                } else
+                {
+                    process.Kernel.SetPermission(targ, outValue, ref error);
 
                     process.Kernel.Print(process, $"File {fileC.Name} permissions changed. to {fileC.PermissionValue}");
 
@@ -387,11 +393,13 @@ namespace HackLinks_Server.Computers.Processes
         // TOOD use file timestamps in LS output somehow.
         public static bool Ls(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length == 2)
             {
-                foreach (File file in process.ActiveDirectory.GetChildren())
+                foreach (FileUtil.DirRecord rec in process.ActiveDirectory.GetChildren())
                 {
-                    if (command[1] == file.Name)
+                    File file = process.Kernel.GetFileAt(process.ActiveDirectory, rec.name, FileDescriptor.Flags.None, ref error);
+                    if (error == Filesystem.Error.None && command[1] == file.Name)
                     {
                         process.Kernel.Print(process, $"{file.Type} {file.Name} > Owner '{process.Kernel.GetUsername(file.OwnerId)}' Group '{file.Group}' Permissions '{PermissionHelper.PermissionToDisplayString(file.PermissionValue)}'");
                         return true;
@@ -403,9 +411,10 @@ namespace HackLinks_Server.Computers.Processes
             else
             {
                 List<string> fileList = new List<string>(new string[] { process.ActiveDirectory.Name });
-                foreach (File file in process.ActiveDirectory.GetChildren())
+                foreach (FileUtil.DirRecord rec in process.ActiveDirectory.GetChildren())
                 {
-                    if (file.HasReadPermission(process.Credentials))
+                    File file = process.Kernel.GetFileAt(process.ActiveDirectory, rec.name, FileDescriptor.Flags.None, ref error);
+                    if (error == Filesystem.Error.None)
                     {
                         fileList.AddRange(new string[] {
                                 file.Name, (file.Type.Equals(FileType.Directory) ? "d" : "f"), (file.HasWritePermission(process.Credentials) ? "w" : "-")
@@ -424,14 +433,17 @@ namespace HackLinks_Server.Computers.Processes
         //TODO update file timestamps on touch. Like linux.
         public static bool Touch(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, "Usage : touch [fileName]");
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.GetChildren())
+            foreach (FileUtil.DirRecord rec in process.ActiveDirectory.GetChildren())
             {
+                FileDescriptor fileC = process.Kernel.OpenAt(process.ActiveDirectory.FileDescriptor, rec.name, FileDescriptor.Flags.Create_Open, Permission.U_All, ref error);
+                if (error == Filesystem.Error.None)
                 if (fileC.Name == command[1])
                 {
                     process.Kernel.Print(process, "File " + command[1] + " touched.");
@@ -444,7 +456,12 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            File file = process.Kernel.CreateFile(process, activeDirectory, command[1], Permission.A_All, process.Credentials.UserId, process.Credentials.Group);
+            File file = process.Kernel.GetFileAt(activeDirectory, command[1], FileDescriptor.Flags.Read_Write | FileDescriptor.Flags.Create_Open, Permission.A_All, ref error);
+
+            if(error != Filesystem.Error.None)
+            {
+                process.Kernel.Print(process, "Error " + error);
+            }
 
             process.Kernel.Print(process, "File " + command[1]);
             return true;
@@ -452,28 +469,29 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool Remove(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
+
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, "Usage : rm [fileName]");
             }
-            var activeDirectory = process.ActiveDirectory;
-            foreach (var file in activeDirectory.GetChildren())
-            {
-                if (file.Name == command[1])
-                {
-                    if (!file.Parent.HasPermission(PermissionClass.Execute | PermissionClass.Write, process.Credentials))
-                    {
-                        process.Kernel.Print(process, "Permission denied.");
-                        return true;
-                    }
-                    process.Kernel.Print(process, "File " + command[1] + " removed.");
 
-                    process.Kernel.UnlinkFile(process, file.FileHandle);
-                    return true;
-                }
+            // TODO split/delimit this param command[1] because whitespace should really be escaped somehow.
+            FileDescriptor fileDescriptor = process.Kernel.Open(process, command[1], FileDescriptor.Flags.Write, ref error);
+
+            process.Kernel.UnlinkFile(fileDescriptor, ref error);
+
+            if (error.Equals(Filesystem.Error.Permission_Denied))
+            {
+                process.Kernel.Print(process, "Permission denied.");
+                return true;
             }
 
-
+            if (error.Equals(Filesystem.Error.None))
+            {
+                process.Kernel.Print(process, "File " + command[1] + " removed.");
+                return true;
+            }
 
             process.Kernel.Print(process, "File does not exist.");
             return true;
@@ -481,6 +499,7 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool Link(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, "Usage : ln [source] [target]");
@@ -492,12 +511,12 @@ namespace HackLinks_Server.Computers.Processes
             }
             var activeDirectory = process.ActiveDirectory;
 
-            File source = process.ActiveDirectory.GetFile(inputs[0]);
+            File source = process.ActiveDirectory.GetFile(inputs[0], FileDescriptor.Flags.None);
 
             if (source != null)
             {
                 process.Kernel.Print(process, "File " + inputs[0] + " linked to " + command[1]);
-                process.Kernel.LinkFile(process, process.ActiveDirectory.FileHandle, source.FileHandle, inputs[1]);
+                process.Kernel.LinkFile(process.ActiveDirectory.FileDescriptor, source.FileDescriptor, inputs[1], ref error);
                 return true;
             } else
             {
@@ -509,6 +528,8 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool MkDir(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
+
             if (command.Length < 2)
             {
                 process.Kernel.Print(process, "Usage : mkdir [folderName]");
@@ -516,14 +537,6 @@ namespace HackLinks_Server.Computers.Processes
             }
 
             var activeDirectory = process.ActiveDirectory;
-            foreach (var fileC in activeDirectory.GetChildren())
-            {
-                if (fileC.Name == command[1])
-                {
-                    process.Kernel.Print(process, "Folder " + command[1] + " already exists.");
-                    return true;
-                }
-            }
 
             bool passed = activeDirectory.HasWritePermission(process.Credentials);
 
@@ -533,7 +546,7 @@ namespace HackLinks_Server.Computers.Processes
                 return true;
             }
 
-            File file = process.Kernel.CreateFile(process, activeDirectory, command[1], Permission.A_All & ~Permission.O_All, process.Credentials.UserId, process.Credentials.Group, FileType.Directory);
+            File file = process.Kernel.Mkdir(activeDirectory, command[1], Permission.A_All & ~Permission.O_All, ref error);
 
             return true;
         }

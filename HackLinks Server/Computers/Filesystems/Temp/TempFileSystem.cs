@@ -14,11 +14,14 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
         public TempFileSystem(int computerId, ulong id) : base(computerId, id)
         {
         }
-
-        public override void UnlinkFile(FileHandle fileHandle)
+         
+        public override void UnlinkFile(FileHandle parent, FileHandle fileHandle)
         {
-            FileHandle parent = fileHandle.FilePath.Parent;
-
+            if(parent == null)
+            {
+                Logger.Error($"Failed to unlink {fileHandle.FilePath.PathStr}");
+                return;
+            }
             List<FileUtil.DirRecord> directoryRecords = FileUtil.GetDirectoryList(this, parent);
 
             // we 'cache' these here so we don't have to do the marginally more expensive property get each iteration of the loop.
@@ -35,7 +38,7 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
                 }
             }
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
-            using (Stream stream = GetFileContent(parent))
+            using (Stream stream = new FilesystemStream(this, parent))
             {
                 stream.SetLength(0);
                 stream.Write(bytes, 0, bytes.Length);
@@ -70,10 +73,7 @@ namespace HackLinks_Server.Computers.Filesystems.Temp
             directoryRecords.Add(new FileUtil.DirRecord(filesystemId, inodeID, name));
 
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
-            using (Stream stream = GetFileContent(directory))
-            {
-                stream.Write(bytes, 0, bytes.Length);
-            }
+            GetInode(directory).Write(bytes, 0, 0, bytes.Length);
 
             return new FileHandle(filesystemId, inodeID, directory.FilePath.Path, name);
         }

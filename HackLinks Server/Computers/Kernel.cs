@@ -24,135 +24,101 @@ namespace HackLinks_Server.Computers
             this.node = node;
         }
 
-        public int GetFilePermissionValue(FileHandle fileHandle)
+        public int GetFileOwnerId(FileDescriptor fileDescriptor)
         {
-            return node.Filesystems[fileHandle.FilesystemId].GetPermissions(fileHandle);
+            return node.GetOwner(fileDescriptor);
         }
 
-        public bool SetFilePermissionValue(Process process, FileHandle fileHandle, int value)
+        internal Group GetFileGroup(FileDescriptor fileDescriptor)
         {
-            if(process.Credentials.UserId == GetFileOwnerId(fileHandle) || process.Credentials.UserId == 0)
-            {
-                node.Filesystems[fileHandle.FilesystemId].SetFilePermissions(fileHandle, value);
-                return true;
-            }
-            return false;
+            return node.GetGroup(fileDescriptor);
         }
 
-        public int GetFileOwnerId(FileHandle fileHandle)
+        internal FileType GetFileType(FileDescriptor fileDescriptor)
         {
-            return node.Filesystems[fileHandle.FilesystemId].GetOwnerId(fileHandle);
+            return node.GetType(fileDescriptor);
         }
 
-        public FileType GetFileType(FileHandle fileHandle)
+        internal Permission GetPermissions(FileDescriptor fileDescriptor)
         {
-            return node.Filesystems[fileHandle.FilesystemId].GetFileType(fileHandle);
+            return node.GetPermissions(fileDescriptor);
         }
 
-        public bool SetFileOwnerId(Process process, FileHandle fileHandle, int value)
+        public void SetPermission(FileDescriptor fileDescriptor, Permission value, ref Filesystem.Error error)
         {
-            // Only root can "give away" files. This is not a bug. See https://unix.stackexchange.com/questions/27350/why-cant-a-normal-user-chown-a-file
-            if (process.Credentials.UserId == 0)
-            {
-                node.Filesystems[fileHandle.FilesystemId].SetOwnerId(fileHandle, value);
-                return true;
-            }
-            return false;
+            node.SetPermissions(fileDescriptor, value, ref error);
         }
 
-        public Group GetFileGroup(FileHandle fileHandle)
+        internal byte[] GetFileContent(FileDescriptor fileDescriptor, ref Filesystem.Error error)
         {
-            return node.Filesystems[fileHandle.FilesystemId].GetGroup(fileHandle);
+            return node.GetContent(fileDescriptor, ref error);
+        }
+
+        public void SetOwnerId(FileDescriptor fileDescriptor, int value, ref Filesystem.Error error)
+        {
+            node.SetOwnerId(fileDescriptor, value, ref error);
+        }
+
+        public void SetGroup(FileDescriptor fileDescriptor, Group value, ref Filesystem.Error error)
+        {
+            node.SetGroup(fileDescriptor, value, ref error);
         }
 
         public void Print(Process process, string input)
         {
-            GetClient(process).Send(PacketType.MESSG, input);
+            GetProcessSession(process).WriteOutput(process, input);
         }
 
-        public bool SetFileGroup(Process process, FileHandle fileHandle, Group value)
+        internal List<FileUtil.DirRecord> GetDirectoryList(FileDescriptor fileDescriptor)
         {
-            // Only root can "give away" files. This is not a bug. See https://unix.stackexchange.com/questions/27350/why-cant-a-normal-user-chown-a-file
-            // BUT A user may give a file they own a group they belong.
-            if ((process.Credentials.UserId == GetFileOwnerId(fileHandle) && (process.Credentials.Group == value || process.Credentials.Groups.Contains(value))) || process.Credentials.UserId == 0)
-            {
-                node.Filesystems[fileHandle.FilesystemId].SetGroup(fileHandle, value);
-                return true;
-            }
-            return false;
+            //TODO permission checks?
+            return node.getDirectoryList(fileDescriptor);
         }
 
         private GameClient GetClient(Process process)
         {
-            ProcessSession session = node.GetProcessSession(process.SessionId) ?? null;
-            return session  != null? session.Owner : null;
+            return node.GetClient(process);
         }
 
-        public string GetFileContent(Process process, FileHandle fileHandle)
+        public string GetContent(FileDescriptor fileDescriptor, ref Filesystem.Error error)
         {
-            if(CheckPermission(fileHandle, PermissionClass.Read, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
+            byte[] bytes = new byte[node.GetLength(fileDescriptor, ref error)];
+            if (error != Filesystem.Error.None)
             {
-                return GetFileContent(fileHandle);
+                return null;
             }
-            return null;
+
+            node.ReadFile(fileDescriptor, bytes, 0, 0, bytes.Length, ref error);
+            return Encoding.UTF8.GetString(bytes);
         }
 
-        private string GetFileContent(FileHandle fileHandle)
+        public void SetContent(FileDescriptor fileDescriptor, string newContent, ref Filesystem.Error error)
         {
-            // TODO optimise
-            using (System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle))
-            {
-                byte[] bytes = new byte[fStream.Length];
-                fStream.Read(bytes, 0, (int)fStream.Length);
-                return Encoding.UTF8.GetString(bytes);
-            }
+            error = Filesystem.Error.None;
+
+            byte[] bytes = Encoding.UTF8.GetBytes(newContent);
+            node.WriteFile(fileDescriptor, bytes, 0, 0, bytes.Length, ref error);
+
+            if (error != Filesystem.Error.None)
+                return;
+
+            // truncate the file to its new length.
+            node.SetFileLength(fileDescriptor, bytes.Length, ref error);
         }
 
-        public bool SetFileContent(Process process, FileHandle fileHandle, string newContent)
+        public FileDescriptor GetParentFileDescriptor(FileDescriptor fileDescriptor, ref Filesystem.Error error)
         {
-            if (CheckPermission(fileHandle, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
-            {
-                SetFileContent(fileHandle, newContent);
-                return true;
-            }
-            return false;
+            return node.GetParentFileDescriptor(fileDescriptor, ref error);
         }
 
-        private void SetFileContent(FileHandle fileHandle, string newContent)
+        public File GetParentFile(File file, ref Filesystem.Error error)
         {
-            // TODO optimise
-            using (System.IO.Stream fStream = node.Filesystems[fileHandle.FilesystemId].GetFileContent(fileHandle))
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(newContent);
-                fStream.Write(bytes, 0, bytes.Length);
-                // truncate the file to its new length.
-                fStream.SetLength(bytes.Length);
-            }
-        }
+            FileDescriptor parent = GetParentFileDescriptor(file.FileDescriptor, ref error);
 
-        public uint GetFileChecksum(FileHandle fileHandle)
-        {
-            return node.Filesystems[fileHandle.FilesystemId].GetFileChecksum(fileHandle);
-        }
+            if (error != Filesystem.Error.None)
+                return null;
 
-        public List<File> GetChildren(Process process, File file)
-        {
-            if (CheckPermission(file.FileHandle, PermissionClass.Execute, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
-            {
-                Filesystem fileSystem = GetFileSystem(file.FileHandle.FilesystemId);
-                return FileUtil.GetDirectoryListAsFiles(process, fileSystem, file);
-            }
-            return new List<File>();
-        }
-
-        public FileHandle GetParentFileHandle(FileHandle fileHandle)
-        {
-            return fileHandle.FilePath.Parent;
-        }
-
-        public File GetParentFile(Process process, File file)
-        {
-            return new File(process, file.FileHandle.FilePath.Parent);
+            return new File(parent, this);
         }
 
         private ProcessSession GetProcessSession(Process process)
@@ -168,10 +134,20 @@ namespace HackLinks_Server.Computers
             GetClient(process).Send(NetUtil.PacketType.KERNL, completeData.ToArray());
         }
 
+        internal bool CheckPermission(FileDescriptor fileDescriptor, Permission value, int userId, Group[] privs)
+        {
+            return node.CheckPermission(fileDescriptor, value, userId, privs);
+        }
+
+        public uint? GetChecksum(FileDescriptor fileDescriptor)
+        {
+            return node.GetChecksum(fileDescriptor);
+        }
+
         public void Login(CommandProcess process, string username, string password)
         {
             GameClient client = GetClient(process);
-            Credentials credentials = Login(GetClient(process), username, password);
+            Credentials credentials = node.Login(process, username, password);
             if (credentials != null)
             {
                 client.Login(node, credentials);
@@ -184,157 +160,14 @@ namespace HackLinks_Server.Computers
             }
         }
 
-        private Credentials Login(GameClient client, string username, string password)
-        {
-            FileHandle usersFile = GetFileHandle("/etc/passwd");
-            if (usersFile == null)
-            {
-                client.Send(NetUtil.PacketType.MESSG, "No passwd file was found!");
-                return null;
-            }
-            FileHandle groupFile = GetFileHandle("/etc/group");
-            if (usersFile == null)
-            {
-                client.Send(NetUtil.PacketType.MESSG, "No group file was found!");
-                return null;
-            }
-            string[] accounts = GetFileContent(usersFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            string[] groups = GetFileContent(groupFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string account in accounts)
-            {
-                string[] accountData = account.Split(':');
-                string accountUsername = accountData[0];
-                string accountPassword = accountData[1];
-                string accountGroupId = accountData[3];
-
-                if (accountUsername == username && accountPassword == password)
-                {
-                    Group primaryGroup = PermissionHelper.GetGroupFromString(accountGroupId);
-                    if (primaryGroup == Group.INVALID)
-                    {
-                        client.Send(NetUtil.PacketType.MESSG, $"Can't login as {username}, '{accountGroupId}' is not a valid accountGroupId");
-                        break;
-                    }
-                    List<Group> loginGroups = new List<Group>();
-                    foreach (string group in groups)
-                    {
-                        string[] groupData = group.Split(':');
-                        string groupName = groupData[0];
-                        string groupId = groupData[2];
-                        string[] groupUsers = groupData[3].Split(',');
-                        if (groupUsers.Contains(username) || accountGroupId.Equals(groupId))
-                        {
-                            Group loginGroup = PermissionHelper.GetGroupFromString(groupId);
-                            if (loginGroup != Group.INVALID)
-                            {
-                                loginGroups.Add(loginGroup);
-                            }
-                            else
-                            {
-                                client.Send(NetUtil.PacketType.MESSG, $"Can't login as {username} {groupName} is not a valid group");
-                                break;
-                            }
-                        }
-                    }
-                    return new Credentials(GetUserId(username), primaryGroup, loginGroups);
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Check if a user can perform the given operation on this file.
-        /// </summary>
-        /// <param name="fileHandle"></param>
-        /// <param name="value"></param>
-        /// <param name="userId"></param>
-        /// <param name="userGroup"></param>
-        /// <param name="groups"></param>
-        /// <returns>True if the user can perform the operation.</returns>
-        public bool CheckPermission(FileHandle fileHandle, PermissionClass value, int userId, Group userGroup, params Group[] groups)
-        {
-            List<Group> groupList = new List<Group>(groups)
-            {
-                userGroup
-            };
-            // TODO FIX got to do a check on each "class" instead of a widespread check. Else we'll not get anywhere
-            return CheckPermission(fileHandle, value, userId, groupList.ToArray());
-        }
-        /// <summary>
-        /// Check if a user can perform the given operation on this file.
-        /// </summary>
-        /// <param name="fileHandle"></param>
-        /// <param name="value"></param>
-        /// <param name="userId"></param>
-        /// <param name="groups"></param>
-        /// <returns>True if the user can perform the operation.</returns>
-        public bool CheckPermission(FileHandle fileHandle, PermissionClass value, int userId, params Group[] groups)
-        {
-            int filePerm = node.Filesystems[fileHandle.FilesystemId].GetPermissions(fileHandle);
-            int fileOwnerId = node.Filesystems[fileHandle.FilesystemId].GetOwnerId(fileHandle);
-            Group fileGroup = node.Filesystems[fileHandle.FilesystemId].GetGroup(fileHandle);
-            // This will return true if any of the "types" of user pass.
-            return PermissionHelper.CheckPermission((Permission)value & Permission.U_All, filePerm, fileOwnerId, fileGroup, userId, groups) || PermissionHelper.CheckPermission((Permission)value & Permission.G_All, filePerm, fileOwnerId, fileGroup, userId, groups) || PermissionHelper.CheckPermission((Permission)value & Permission.O_All, filePerm, fileOwnerId, fileGroup, userId, groups);
-        }
-
-        private Filesystem GetFileSystem(ulong id)
-        {
-            return node.Filesystems[id];
-        }
-
         public void Connect(Process process, string host)
         {
-            GameClient client = GetClient(process);
-            if(client != null)
-            {
-                if (client.ActiveSession != null)
-                    client.ActiveSession.DisconnectSession();
-                // TODO create device file linked to print on connect and destroy on disconnect.
-                // TODO set perms for device to client who logged in
-                // TODO WHO Owns tty after SU ?!?!?! is it transfered to new user or does it belong to the original ?
-                if (client.ActiveProcessSession != null)
-                    client.ActiveProcessSession.DisconnectSession();
-                Node connectingToNode = GetNodeByHost(client, host);
-                if (connectingToNode != null)
-                    client.ConnectTo(connectingToNode);
-                else
-                    client.Send(NetUtil.PacketType.KERNL, "connect", "fail", "0");
-            }
+            node.ReconnectClient(process, host);
         }
 
-        private Node GetNodeByHost(GameClient client, string host)
+        internal FileDescriptor Open(Process process, string path, FileDescriptor.Flags flags, ref Filesystem.Error error)
         {
-            var compManager = client.server.GetComputerManager();
-            string resultIP = null;
-
-            if (client.homeComputer != null)
-            {
-                if (host == "localhost" || host == "127.0.0.1")
-                    resultIP = client.homeComputer.ip;
-                else
-                {
-                    // WARNING. this file handle originates on another computer. It cannot be used locally
-                    FileHandle DNSConfigFile = client.homeComputer.Kernel.GetFileHandle("/cfg/dns.cfg");
-                    if (DNSConfigFile != null)
-                    {
-                        foreach (string ip in client.homeComputer.Kernel.GetFileContent(DNSConfigFile).Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            var DNSNode = compManager.GetNodeByIp(ip);
-                            if (DNSNode == null)
-                                continue;
-                            var daemon = (DNSDaemon)DNSNode.GetDaemon("dns");
-                            if (daemon == null)
-                                continue;
-                            resultIP = daemon.LookUp(host);
-                            if (resultIP != null)
-                                break;
-                        }
-                    }
-                }
-            }
-            var connectingToNode = compManager.GetNodeByIp(resultIP ?? host);
-            return connectingToNode;
+            return Open(process, path, flags, Permission.None, ref error);
         }
 
         /// <summary>
@@ -370,20 +203,15 @@ namespace HackLinks_Server.Computers
 
         public void CD(Process process, string name)
         {
-            GetClient(process).Send(NetUtil.PacketType.KERNL, new string[] { "cd", name});
+            GameClient client = GetClient(process);
+            if (client != null) {
+                client.Send(NetUtil.PacketType.KERNL, new string[] { "cd", name });
+            }
         }
 
         public Process StartProcess(Process process, File file)
         {
-            if(!file.HasExecutePermission(process.Credentials))
-                StartProcess(process, "False");
-            string type = GetClient(process).server.GetCompileManager().GetType(file.Checksum);
-            return StartProcess(process, type);
-        }
-
-        private Process StartProcess(Process process, string type)
-        {
-            return node.CreateProcess(type, process);
+            return node.StartProcess(file, process);
         }
 
         public void PlayMusic(Process process, string song)
@@ -408,65 +236,14 @@ namespace HackLinks_Server.Computers
 
         public List<Account> GetAccounts(Process process)
         {
-            return Account.FromFile(process, node.Kernel.GetFile(process, "/etc/passwd"), node);
+            Filesystem.Error error = Filesystem.Error.None;
+            File file = node.Kernel.GetFile(process, "/etc/passwd", FileDescriptor.Flags.Read, ref error);
+            return error == Filesystem.Error.None ? Account.FromFile(process, file, node) : null;
         }
 
         public string GetUsername(int userId)
         {
-            FileHandle usersFile = GetFileHandle(node.GetRootFilesystemId(), "passwd");
-            if (usersFile == null)
-            {
-                return "";
-            }
-            FileHandle groupFile = GetFileHandle(node.GetRootFilesystemId(), "/etc/group");
-            if (usersFile == null)
-            {
-                return "";
-            }
-            string[] accounts = GetFileContent(usersFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            string[] groups = GetFileContent(groupFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string account in accounts)
-            {
-                string[] accountData = account.Split(':');
-                string accountUsername = accountData[0];
-                string accountUserIdString = accountData[2];
-
-                if (userId.ToString() == accountUserIdString)
-                {
-                    return accountUsername;
-                }
-            }
-            return "";
-        }
-
-        public int GetUserId(string username)
-        {
-            FileHandle usersFile = GetFileHandle(node.GetRootFilesystemId(), "/etc/passwd");
-            if (usersFile == null)
-            {
-                return -1;
-            }
-            FileHandle groupFile = GetFileHandle(node.GetRootFilesystemId(), "/etc/group");
-            if (usersFile == null)
-            {
-                return -1;
-            }
-            string[] accounts = GetFileContent(usersFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            string[] groups = GetFileContent(groupFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string account in accounts)
-            {
-                string[] accountData = account.Split(':');
-                string accountUsername = accountData[0];
-                string accountUserIdString = accountData[2];
-
-                if (accountUsername == username)
-                {
-                    return int.TryParse(accountUserIdString, out int result) ? result : -1;
-                }
-            }
-            return -1;
+            return node.GetUsername(userId);
         }
 
         public void Log(Log.LogEvents logEvent, string message, int sessionId, string ip)
@@ -598,98 +375,44 @@ namespace HackLinks_Server.Computers
         //    this.logs = logs;
         }
 
-        public void LinkFile(Process process, FileHandle activeDirectory, FileHandle target, string name)
+
+        public void LinkFile(FileDescriptor activeDirectory, FileDescriptor target, string name, ref Filesystem.Error error)
         {
-            if (CheckPermission(activeDirectory, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
-            {
-                GetFileSystem(activeDirectory.FilesystemId).LinkFile(activeDirectory, target, name);
-            }
+            node.Link(activeDirectory, target, name, ref error);
         }
 
-        public void UnlinkFile(Process process, FileHandle fileHandle)
+        public void UnlinkFile(FileDescriptor fileDescriptor, ref Filesystem.Error error)
         {
-            if(CheckPermission(fileHandle.FilePath.Parent, PermissionClass.Write, process.Credentials.UserId, process.Credentials.Group, process.Credentials.Groups))
-            {
-                GetFileSystem(fileHandle.FilePath.Parent.FilesystemId).UnlinkFile(fileHandle);
-            }
-        }
-
-        public FileHandle CreateFile(FileHandle directory, string name, Permission permissions, int ownerId, Group group, FileType type)
-        {
-            return GetFileSystem(directory.FilesystemId).CreateFile(directory, name, permissions, ownerId, group, type);
-        }
-
-        public FileHandle CreateFile(FileHandle directory, string name, Permission permissions, int ownerId, Group group)
-        {
-            return CreateFile(directory, name, permissions, ownerId, group, FileType.Regular);
-        }
-
-        public File CreateFile(Process process, File directory, string name, Permission permissions, int ownerId, Group group, FileType type)
-        {
-            return new File(process, CreateFile(directory.FileHandle, name, permissions, ownerId, group, type));
-        }
-
-        public File CreateFile(Process process, File directory, string name, Permission permissions, int ownerId, Group group)
-        {
-            return CreateFile(process, directory, name, permissions, ownerId, group, FileType.Regular);
+            node.Unlink(fileDescriptor, ref error);
         }
 
         public bool HasUser(string username)
         {
-            return GetUserId(username) != -1;
+            return node.GetUserId(username) != -1;
         }
 
-        public string GetUserShell(int userId)
+        public int GetUserId(string username)
         {
-            FileHandle usersFile = GetFileHandle(node.GetRootFilesystemId(), "passwd");
-            if (usersFile == null)
+            return node.GetUserId(username);
+        }
+
+        public FileDescriptor Open(Process process, string path, FileDescriptor.Flags flags, Permission mode, ref Filesystem.Error error)
+        {
+            return node.Open(process, path, flags, mode, ref error);
+        }
+
+        public FileDescriptor OpenAt(FileDescriptor fileDescriptor, string path, FileDescriptor.Flags flags, Permission mode, ref Filesystem.Error error)
+        {
+            return node.OpenAt(fileDescriptor, path, flags, mode, ref error);
+        }
+
+        public File GetFile(Process process, string path, FileDescriptor.Flags flags, Permission permission, ref Filesystem.Error error)
+        {
+            FileDescriptor fileDescriptor = Open(process, path, flags, permission, ref error);
+
+            if (error == Filesystem.Error.None && fileDescriptor != null)
             {
-                return "";
-            }
-            FileHandle groupFile = GetFileHandle(node.GetRootFilesystemId(), "/etc/group");
-            if (usersFile == null)
-            {
-                return "";
-            }
-            string[] accounts = GetFileContent(usersFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-            string[] groups = GetFileContent(groupFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string account in accounts)
-            {
-                string[] accountData = account.Split(':');
-                string accountUserIdString = accountData[2];
-
-                if (userId.ToString() == accountUserIdString)
-                {
-                    string accountUserShell = accountData[6];
-                    return accountUserShell;
-                }
-            }
-            return "";
-        }
-        
-        public File GetFile(Process process, string path)
-        {
-            return GetFile(process, node.GetRootFilesystemId(), path);
-        }
-
-        public FileHandle GetFileHandle(string path)
-        {
-            return GetFileHandle(node.GetRootFilesystemId(), path);
-        }
-
-        public FileHandle GetFileHandle(ulong filesystemId, string path)
-        {
-            Filesystem fileSystem = GetFileSystem(filesystemId);
-            return fileSystem.GetFileHandle(path);
-        }
-
-        public File GetFile(Process process, ulong filesystemId, string path)
-        {
-            FileHandle handle = GetFileHandle(filesystemId, path);
-            if(handle != null)
-            {
-                return new File(process, handle);
+                return new File(fileDescriptor, this);
             }
             else
             {
@@ -697,13 +420,13 @@ namespace HackLinks_Server.Computers
             }
         }
 
-
-        public File GetFileAt(Process process, File file, string name)
+        public File GetFile(Process process, string path, FileDescriptor.Flags flags, ref Filesystem.Error error)
         {
-            FileHandle handle = GetFileHandleAt(file.FileHandle, name);
-            if (handle != null)
+            FileDescriptor fileDescriptor = Open(process, path, flags, Permission.None, ref error);
+
+            if (error == Filesystem.Error.None && fileDescriptor != null)
             {
-                return new File(process, handle);
+                return new File(fileDescriptor, this);
             }
             else
             {
@@ -711,10 +434,28 @@ namespace HackLinks_Server.Computers
             }
         }
 
-        private FileHandle GetFileHandleAt(FileHandle fileHandle, string name)
+        public File GetFileAt(File file, string path, FileDescriptor.Flags flags, ref Filesystem.Error error)
         {
-            Filesystem fileSystem = GetFileSystem(fileHandle.FilesystemId);
-            return fileSystem.GetFileHandleAt(name, fileHandle);
+            return GetFileAt(file, path, flags, Permission.None, ref error);
+        }
+
+        public File GetFileAt(File file, string path, FileDescriptor.Flags flags, Permission mode, ref Filesystem.Error error)
+        {
+            FileDescriptor descriptor = OpenAt(file.FileDescriptor, path, flags, mode, ref error);
+
+            if (error == Filesystem.Error.None && descriptor != null)
+            {
+                return new File(descriptor, this);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        internal File Mkdir(File activeDirectory, string name, Permission permission, ref Filesystem.Error error)
+        {
+            return node.Mkdir(activeDirectory, name, permission, ref error);
         }
     }
 }

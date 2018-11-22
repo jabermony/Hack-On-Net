@@ -39,10 +39,11 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool BankAccount(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             BankClient client = (BankClient)process;
             BankDaemon daemon = (BankDaemon)client.Daemon;
 
-            var accountFile = process.Kernel.GetFileHandle("/bank/accounts.db");
+            File accountFile = process.Kernel.GetFile(process, "/bank/accounts.db", FileDescriptor.Flags.Read, Permission.None, ref error);
 
             if (command[0] == "account")
             {
@@ -62,10 +63,10 @@ namespace HackLinks_Server.Computers.Processes
                         return true;
                     }
                     List<string> accounts = new List<string>();
-                    var accountsFileContent = process.Kernel.GetFileContent(process, accountFile).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    var accountsFileContent = accountFile.GetContentString().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
                     if (accountsFileContent.Length != 0)
                     {
-                        foreach (string line in process.Kernel.GetFileContent(process, accountFile).Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+                        foreach (string line in accountFile.GetContentString().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
                         {
                             var data = line.Split(',');
                             if (data.Length < 4)
@@ -197,13 +198,13 @@ namespace HackLinks_Server.Computers.Processes
                         process.Kernel.Print(process, "You are not logged in");
                         return true;
                     }
-                    File transactionLog = process.Kernel.GetFile(process, "/bank/transactionlog.db");
+                    File transactionLog = process.Kernel.GetFile(process, "/bank/transactionlog.db", FileDescriptor.Flags.Read, Permission.None, ref error);
                     if (transactionLog == null)
                     {
                         process.Kernel.Print(process, "This bank does not keep transaction logs");
                         return true;
                     }
-                    string[] transactions = transactionLog.GetContent().Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] transactions = transactionLog.GetContentString().Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                     if (transactions.Length == 0)
                     {
                         process.Kernel.Print(process, "The transaction log database is empty");
@@ -218,15 +219,7 @@ namespace HackLinks_Server.Computers.Processes
                     }
                     if (transactionLogForClient == "")
                         transactionLogForClient += "Your transaction log is empty";
-                    File transactionFileForClient = client.Session.owner.homeComputer.Kernel.GetFile(process, "/Bank_Transaction_Log_For_" + client.loggedInAccount.accountName);
-                    if (transactionFileForClient == null)
-                    {
-                        File ClientRoot = client.Session.owner.homeComputer.Kernel.GetFile(process, "/");
-                        transactionFileForClient = client.Session.owner.homeComputer.Kernel.CreateFile(process, ClientRoot, "Bank_Transaction_Log_For_" + client.loggedInAccount.accountName, Permission.A_All & ~Permission.O_All, ClientRoot.OwnerId, ClientRoot.Group);
-                        transactionFileForClient.SetContent(transactionLogForClient);
-                        process.Kernel.Print(process, "A file containing your transaction log has been uploaded to your computer");
-                        return true;
-                    }
+                    File transactionFileForClient = client.Session.owner.homeComputer.Kernel.GetFile(process, "/Bank_Transaction_Log_For_" + client.loggedInAccount.accountName, FileDescriptor.Flags.Read_Write | FileDescriptor.Flags.Create_Open, Permission.O_All | Permission.G_All, ref error);
                     transactionFileForClient.SetContent(transactionLogForClient);
                     process.Kernel.Print(process, "A file containing your transaction log has been uploaded to your computer");
                 }
@@ -256,6 +249,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             BankClient client = (BankClient)process;
             BankDaemon daemon = (BankDaemon)client.Daemon;
+            Filesystem.Error error = Filesystem.Error.None;
 
             if (command[0] == "balance")
             {
@@ -295,7 +289,7 @@ namespace HackLinks_Server.Computers.Processes
                     {
                         account.balance = val;
                         daemon.UpdateAccountDatabase();
-                        var bankFolder = process.Kernel.GetFile(process, "/bank");
+                        var bankFolder = process.Kernel.GetFile(process, "/bank", FileDescriptor.Flags.Read, Permission.None, ref error);
                         daemon.LogTransaction($"{account.accountName},CHEATED Balance set to {val}", client.Session.sessionId, client.Session.owner.homeComputer.ip);
                     }
                     else

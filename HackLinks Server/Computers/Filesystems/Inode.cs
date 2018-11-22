@@ -16,16 +16,13 @@ namespace HackLinks_Server.Computers.Filesystems
         public ulong ID { get; private set; }
         public int ComputerID => Filesystem.ComputerID;
 
-        public bool Dirty { get; set; }
-
         // File Mode is composed of these values: Permissions, OwnerId, Group, Type.
         private int mode;
-        public int PermissionValue { get => mode & 0b000111111111; set => mode = (mode & 0b111000000000) | value; }
+        public Permission PermissionValue { get => (Permission) (mode & 0b000111111111); set => mode = (mode & 0b111000000000) | (int) value; }
         public int OwnerId { get; set; }
         public Group Group { get; set; }
         public FileType Type { get => (FileType)(mode >> 9 & 0b111); protected set => mode = (mode & 0b000111111111) | (int)value << 9; }
 
-        public abstract Stream ContentStream { get; }
         public abstract uint Checksum { get; }
 
         protected Inode(Filesystem fileSystem, ulong id, int mode)
@@ -69,5 +66,11 @@ namespace HackLinks_Server.Computers.Filesystems
         {
             return PermissionHelper.CheckPermission(mask, PermissionValue, OwnerId, Group, userId, privs);
         }
+
+        public abstract int Length { get; set; }
+
+        public abstract int Read(byte[] buffer, int offset, int position, int count);
+
+        public abstract void Write(byte[] inputBuffer, int offset, int position, int count);
     }
 }

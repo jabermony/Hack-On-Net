@@ -15,10 +15,8 @@ namespace HackLinks_Server.Computers.Filesystems
         {
         }
 
-        public override void UnlinkFile(FileHandle fileHandle)
+        public override void UnlinkFile(FileHandle parent, FileHandle fileHandle)
         {
-            FileHandle parent = fileHandle.FilePath.Parent;
-
             List<FileUtil.DirRecord> directoryRecords = FileUtil.GetDirectoryList(this, parent);
 
             // we 'cache' these here so we don't have to do the marginally more expensive property get each iteration of the loop.
@@ -35,7 +33,7 @@ namespace HackLinks_Server.Computers.Filesystems
                 }
             }
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
-            using (Stream stream = GetFileContent(parent))
+            using (Stream stream = new FilesystemStream(this, parent))
             {
                 stream.Write(bytes, 0, bytes.Length);
             }
@@ -68,10 +66,11 @@ namespace HackLinks_Server.Computers.Filesystems
             }
             directoryRecords.Add(new FileUtil.DirRecord(filesystemId, inodeID, name));
             byte[] bytes = FileUtil.FromDirRecords(directoryRecords.ToArray());
-            using (Stream stream = GetFileContent(directory))
+            using (Stream stream = new FilesystemStream(this, directory))
             {
                 stream.Write(bytes, 0, bytes.Length);
             }
+            // TODO handle links for other FS?
             Server.Instance.DatabaseLink.LinkFile(ComputerID, ID, inodeID);
             return new FileHandle(filesystemId, inodeID, directory.FilePath.Path, name);
         }

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.Remoting.Proxies;
 using System.Security;
+using HackLinks_Server.Computers.Filesystems;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Files;
 
@@ -52,9 +53,10 @@ namespace HackLinks_Server.Computers.Processes
 
         private static bool EditUser(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length == 1) return false;
-            File groupsFile = process.Kernel.GetFile(process, "/etc/group");
-            File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
+            File groupsFile = process.Kernel.GetFile(process, "/etc/group", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
+            File usersFile = process.Kernel.GetFile(process, "/etc/passwd", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
                 process.Kernel.Print(process, "You do not have the required permissions");
@@ -116,19 +118,20 @@ namespace HackLinks_Server.Computers.Processes
         
         public static bool SetPrimaryGroup(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length == 1) return false;
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length != 2) return false;
             string username = cmdArgs[0];
             string groupname = cmdArgs[1];
-            File groupsFile = process.Kernel.GetFile(process, "/etc/group");
-            File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
+            File groupsFile = process.Kernel.GetFile(process, "/etc/group", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
+            File usersFile = process.Kernel.GetFile(process, "/etc/passwd", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
                 process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
             }
-            string[] groups = groupsFile.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            string[] groups = groupsFile.GetContentString().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             List<Account> accounts = process.Kernel.GetAccounts(process);
             if (accounts.All(acc => acc.Username.ToLower() != username.ToLower()))
             {
@@ -151,12 +154,13 @@ namespace HackLinks_Server.Computers.Processes
         
         public static bool AddUser(CommandProcess process, string[] command)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             if (command.Length == 1) return false;
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length < 3 || cmdArgs.Length > 7) return false;
             
-            File groupsFile = process.Kernel.GetFile(process, "/etc/group");
-            File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
+            File groupsFile = process.Kernel.GetFile(process, "/etc/group", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
+            File usersFile = process.Kernel.GetFile(process, "/etc/passwd", FileDescriptor.Flags.Read_Write, Permission.None, ref error);
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
                 process.Kernel.Print(process, "You do not have the required permissions");
@@ -185,12 +189,12 @@ namespace HackLinks_Server.Computers.Processes
                 process.Kernel.Print(process, "This user already exists");
                 return true;
             }
-
-            if (process.Kernel.GetFile(process, homepath) == null)
+            process.Kernel.GetFile(process, homepath, FileDescriptor.Flags.Read_Write | FileDescriptor.Flags.Create_Open, Permission.O_All, ref error);
+            if (error == Filesystem.Error.None)
             {
                 //TODO create home directory
             }
-            if (process.Kernel.GetFile(process, defaultprocessPath) == null)
+            if (process.Kernel.GetFile(process, defaultprocessPath, FileDescriptor.Flags.Read, Permission.None, ref error) == null)
             {
                 process.Kernel.Print(process, "The default process's file doesn't exists !");
                 return true;
@@ -208,8 +212,13 @@ namespace HackLinks_Server.Computers.Processes
             if (command.Length == 1) return false;
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length != 1) return false;
-            File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
-            if (!usersFile.HasReadPermission(process.Credentials))
+
+            Filesystem.Error error = Filesystem.Error.None;
+
+            FileDescriptor usersFd = process.Kernel.Open(process, "/etc/passwd", FileDescriptor.Flags.Read, ref error);
+            File usersFile = new File(usersFd, process.Kernel);
+
+            if (!usersFile.HasReadPermission(process.Credentials) || error != Filesystem.Error.None)
             {
                 process.Kernel.Print(process, "You do not have the required permissions");
                 return true;
@@ -237,11 +246,18 @@ namespace HackLinks_Server.Computers.Processes
 
         public static bool DeleteUser(CommandProcess process, string[] command)
         {
+            // TODO actually check the error
+            Filesystem.Error error = Filesystem.Error.None;
+
             if (command.Length == 1) return false;
             var cmdArgs = command[1].Split(' ');
             if (cmdArgs.Length != 1) return false;
-            File groupsFile = process.Kernel.GetFile(process, "/etc/group");
-            File usersFile = process.Kernel.GetFile(process, "/etc/passwd");
+            FileDescriptor groupFd = process.Kernel.Open(process, "/etc/group", FileDescriptor.Flags.Read, ref error);
+            File groupsFile = new File(groupFd, process.Kernel);
+
+            FileDescriptor usersFd = process.Kernel.Open(process, "/etc/passwd", FileDescriptor.Flags.Read, ref error);
+            File usersFile = new File(usersFd, process.Kernel);
+
             if (!groupsFile.HasWritePermission(process.Credentials) && !usersFile.HasWritePermission(process.Credentials))
             {
                 process.Kernel.Print(process, "You do not have the required permissions");

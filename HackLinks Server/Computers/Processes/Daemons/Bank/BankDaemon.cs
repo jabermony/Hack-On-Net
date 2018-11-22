@@ -35,11 +35,12 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         public void LoadAccounts()
         {
+            Filesystem.Error error = Filesystem.Error.None;
             accounts.Clear();
-            File accountFile = Kernel.GetFile(this, "/bank/accounts.db");
+            File accountFile = Kernel.GetFile(this, "/bank/accounts.db", FileDescriptor.Flags.Read, Permission.None, ref error);
             if (accountFile == null)
                 return;
-            foreach (string line in accountFile.GetContent().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in accountFile.GetContentString().Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var data = line.Split(',');
                 if (data.Length < 4)
@@ -50,7 +51,8 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         public void UpdateAccountDatabase()
         {
-            File accountFile = Kernel.GetFile(this, "/bank/accounts.db");
+            Filesystem.Error error = Filesystem.Error.None;
+            File accountFile = Kernel.GetFile(this, "/bank/accounts.db", FileDescriptor.Flags.None, Permission.None, ref error);
             if (accountFile == null)
                 return;
             string newAccountsFile = "";
@@ -63,13 +65,14 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         public bool CheckFolders(CommandProcess process)
         {
-            var bankFolder = Kernel.GetFile(process, "/bank");
+            Filesystem.Error error = Filesystem.Error.None;
+            var bankFolder = Kernel.GetFile(process, "/bank", FileDescriptor.Flags.Read, Permission.None, ref error);
             if (bankFolder == null || !bankFolder.Type.Equals(FileType.Directory))
             {
                 process.Kernel.Print(process, "No bank daemon folder was found ! (Contact the admin of this node to create one as the bank is useless without one)");
                 return false;
             }
-            var accountFile = Kernel.GetFile(process, "/bank/accounts.db");
+            var accountFile = Kernel.GetFile(process, "/bank/accounts.db", FileDescriptor.Flags.None, Permission.None, ref error);
             if (accountFile == null)
             {
                 process.Kernel.Print(process, "No accounts file was found ! (Contact the admin of this node to create one as the bank is useless without one)");
@@ -96,13 +99,14 @@ namespace HackLinks_Server.Computers.Processes.Daemons
 
         public void LogTransaction(string transactionMessage, int sessionId, string ip)
         {
-            File transactionLog = Kernel.GetFile(this, "/bank/transactionlog.db");
+            Filesystem.Error error = Filesystem.Error.None;
+            File transactionLog = Kernel.GetFile(this, "/bank/transactionlog.db", FileDescriptor.Flags.None, Permission.None, ref error);
             if (transactionLog != null)
             {
-                if (transactionLog.GetContent() == "")
-                    transactionLog.SetContent(transactionLog.GetContent().Insert(0, transactionMessage));
+                if (transactionLog.GetContentString() == "")
+                    transactionLog.SetContent(transactionLog.GetContentString().Insert(0, transactionMessage));
                 else
-                    transactionLog.SetContent(transactionLog.GetContent().Insert(0, transactionMessage + "\r\n"));
+                    transactionLog.SetContent(transactionLog.GetContentString().Insert(0, transactionMessage + "\r\n"));
             }
             // TODO logging
             //node.Log(Log.LogEvents.BankTransaction, transactionMessage, sessionId, ip);

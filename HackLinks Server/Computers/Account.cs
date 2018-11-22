@@ -5,7 +5,9 @@ using System.Linq;
 using HackLinks_Server.Computers;
 using HackLinks_Server.Computers.Permissions;
 using HackLinks_Server.Computers.Processes;
+using HackLinks_Server.Computers.Filesystems;
 using File = HackLinks_Server.Files.File;
+using HackLinks_Server.Util;
 
 namespace HackLinks_Server.Computers.Permissions
 {
@@ -100,8 +102,14 @@ namespace HackLinks_Server.Computers.Permissions
 
         public void ApplyChanges(Process process)
         {
-            File passwd = process.Kernel.GetFile(process, "/etc/passwd");
-            string[] accounts = passwd.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            Filesystem.Error error = Filesystem.Error.None;
+            File passwd = process.Kernel.GetFile(process, "/etc/passwd", FileDescriptor.Flags.Read_Write, ref error);
+            if(error != Filesystem.Error.None)
+            {
+                Logger.Error("No passwd");
+                return;
+            }
+            string[] accounts = passwd.GetContentString().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             if (UserId == -1)
             {
                 if (new Account(accounts.Last(), Kernel).UserId < 1000) UserId = 1000;
@@ -167,7 +175,7 @@ namespace HackLinks_Server.Computers.Permissions
         public static List<Account> FromFile(Process process, File passwd,Node computer)
         {
             List<Account> tmp = new List<Account>();
-            string[] accounts = passwd.GetContent().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            string[] accounts = passwd.GetContentString().Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             foreach (string account in accounts)
             {
                 tmp.Add(new Account(account,computer.Kernel));

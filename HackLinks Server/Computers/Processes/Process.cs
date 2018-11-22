@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HackLinks_Server.Computers.Filesystems;
 
 namespace HackLinks_Server.Computers.Processes
 {
@@ -84,16 +85,30 @@ namespace HackLinks_Server.Computers.Processes
 
         public int SessionId => node.GetSessionId(ProcessId);
 
+        private bool initialized = false;
+
         public Process(int pid, Node node, Credentials credentials)
         {
             ProcessId = pid;
             this.Kernel = node.Kernel;
-            ActiveDirectory = Kernel.GetFile(this, "/");
             Credentials = credentials;
 
             currentState = State.New;
             this.node = node;
-            node.RegisterProcess(this);
+        }
+
+        public void Init(ref Filesystem.Error error)
+        {
+            if(!initialized)
+            {
+                FileDescriptor fd = Kernel.Open(this, "/", FileDescriptor.Flags.None, ref error);
+                if(error == Filesystem.Error.None)
+                {
+                    ActiveDirectory = new File(fd, Kernel);
+                    node.RegisterProcess(this);
+                }
+                initialized = true;
+            }
         }
 
         /// <summary>

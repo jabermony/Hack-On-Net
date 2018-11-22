@@ -163,7 +163,7 @@ namespace HackLinks_Server.Database
         /// <param name="filesystemId"></param>
         /// <param name="inode"></param>
         /// <returns>Number of bytes in file</returns>
-        public long GetFileLength(int computerId, ulong filesystemId, ulong inode)
+        public int GetFileLength(int computerId, ulong filesystemId, ulong inode)
         {
             using (MySqlConnection conn = new MySqlConnection(GetConnectionString()))
             {
@@ -183,7 +183,7 @@ namespace HackLinks_Server.Database
                         fileReader.Read();
                         if(!fileReader.IsDBNull(0))
                         {
-                            return fileReader.GetInt64(0);
+                            return (int) fileReader.GetInt64(0);
                         }
                     }
                     return 0;

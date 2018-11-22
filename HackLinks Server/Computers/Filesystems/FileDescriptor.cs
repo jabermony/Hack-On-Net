@@ -1,5 +1,4 @@
-﻿using HackLinks_Server.Computers.Processes;
-using HackLinks_Server.Util;
+﻿using HackLinks_Server.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace HackLinks_Server.Computers.Filesystems
 {
-    public class FileHandle
+    public class FileDescriptor
     {
         /// <summary>
         /// The ID of the <see cref="FilesystemId"/> this file belongs to
@@ -16,9 +15,9 @@ namespace HackLinks_Server.Computers.Filesystems
         public ulong FilesystemId { get; }
 
         /// <summary>
-        /// The inode number for this file, it should usually be unique per <see cref="FilesystemId"/>
+        /// The ID for this FileDescriptor, it should usually be unique per <see cref="Node"/>
         /// </summary>
-        public ulong Inode { get; }
+        public ulong ID { get; }
 
         /// <summary>
         /// The absolute path used to open this file.
@@ -30,12 +29,22 @@ namespace HackLinks_Server.Computers.Filesystems
         /// </summary>
         public string Name { get; }
 
-        public FileHandle(ulong FilesystemId, ulong inode, List<string> path, string name)
+        public FileDescriptor(ulong FilesystemId, ulong id, List<string> path)
         {
             this.FilesystemId = FilesystemId;
-            Inode = inode;
-            Name = name;
-            FilePath = new FilePath(path, name);
+            ID = id;
+            Name = PathUtil.Basename(path);
+            FilePath = new FilePath(path);
+        }
+
+        [Flags]
+        public enum Flags
+        {
+            None        = 0b00000000,
+            Read        = 0b00000001,
+            Write       = 0b00000010,
+            Read_Write  = 0b00000011,
+            Create_Open = 0b00000100,
         }
     }
 }

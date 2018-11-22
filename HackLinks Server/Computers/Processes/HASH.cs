@@ -44,15 +44,16 @@ namespace HackLinks_Server.Computers.Processes
 
         private File SearchPath(string value)
         {
+            Filesystem.Error error = Filesystem.Error.None;
             // Only explicitly relative paths can be used for starting commands
             if (value.StartsWith("./")) { 
-                File file = ActiveDirectory.GetFile(value);
+                File file = ActiveDirectory.GetFile(value, FileDescriptor.Flags.Read);
                 if (file != null)
                 {
                     return file;
                 }
             }
-            File bin = Kernel.GetFile(this, "/bin/" + value);
+            File bin = Kernel.GetFile(this, "/bin/" + value, FileDescriptor.Flags.Read, Permission.None, ref error);
             return bin;
         }
 
@@ -107,7 +108,7 @@ namespace HackLinks_Server.Computers.Processes
                 }
             }
 
-            File file = process.ActiveDirectory.GetFile(command[1]);
+            File file = process.ActiveDirectory.GetFile(command[1], FileDescriptor.Flags.None);
 
             if(file != null)
             {

@@ -36,6 +36,7 @@ namespace HackLinks_Server.Computers.Processes
         {
             DNSClient client = (DNSClient) process;
             DNSDaemon daemon = (DNSDaemon) client.Daemon;
+            Filesystem.Error error = Filesystem.Error.None;
 
             if (command[0] == "dns")
             {
@@ -82,25 +83,11 @@ namespace HackLinks_Server.Computers.Processes
                         process.Kernel.Print(process, "Missing arguments.\nProper usage: dns assign [IP] [URL]");
                         return true;
                     }
-                    File dnsFolder = process.Kernel.GetFile(process, "/dns");
-                    if (dnsFolder == null)
+                    File dnsEntries = process.Kernel.GetFile(process, "/dns/entries.db", FileDescriptor.Flags.Read_Write | FileDescriptor.Flags.Create_Open, ref error);
+                    if (dnsEntries.Type.Equals(FileType.Directory))
                     {
-                        dnsFolder = process.Kernel.CreateFile(process, process.Kernel.GetFile(process, "/"), "dns", Permission.A_All & ~Permission.O_All, 0, process.Credentials.Group, FileType.Directory);
-                    }
-                    else
-                    {
-                        if (!dnsFolder.Type.Equals(FileType.Directory))
-                            return true;
-                    }
-                    File dnsEntries = dnsFolder.GetFile("entries.db");
-                    if (dnsEntries == null)
-                    {
-                        dnsEntries = process.Kernel.CreateFile(process, dnsFolder, "entries.db", Permission.A_All & ~Permission.O_All, 0, Group.ADMIN);
-                    }
-                    else if (dnsEntries.Type.Equals(FileType.Directory))
-                    {
-                        process.Kernel.UnlinkFile(process, dnsEntries.FileHandle);
-                        dnsEntries = process.Kernel.CreateFile(process, dnsFolder, "entries.db", Permission.A_All & ~Permission.O_All, 0, Group.ADMIN);
+                        process.Kernel.Print(process, "Error /dns/entries.db is not file");
+                        return true;
                     }
                     foreach (DNSEntry entry in daemon.entries)
                     {
@@ -110,7 +97,7 @@ namespace HackLinks_Server.Computers.Processes
                             return true;
                         }
                     }
-                    dnsEntries.SetContent(dnsEntries.GetContent() + '\n' + cmdArgs[1] + '=' + cmdArgs[2]);
+                    dnsEntries.SetContent(dnsEntries.GetContentString() + '\n' + cmdArgs[1] + '=' + cmdArgs[2]);
                     daemon.LoadEntries();
                     process.Kernel.Print(process, "Content appended.");
                     return true;

@@ -67,7 +67,7 @@ namespace HackLinks_Server.Computers.Processes
                 process.Kernel.Print(process, "Usage: compile FILENAME TYPE");
                 return true;
             }
-            File file = process.ActiveDirectory.GetFile(args[0]);
+            File file = process.ActiveDirectory.GetFile(args[0], FileDescriptor.Flags.Read);
             if (file == null)
             {
                 process.Kernel.Print(process, "File not found");
@@ -78,7 +78,15 @@ namespace HackLinks_Server.Computers.Processes
                 process.Kernel.Print(process, "Invalid file, cannot be folder");
                 return true;
             }
-            serverAdmin.client.server.GetCompileManager().AddType(file.Checksum, args[1]);
+
+            uint? checksum = process.Kernel.GetChecksum(file.FileDescriptor);
+            if(checksum.HasValue)
+            {
+                serverAdmin.client.server.GetCompileManager().AddType(checksum.Value, args[1]);
+            } else
+            {
+                process.Kernel.Print(process, "Invalid file, cannot produce checksum");
+            }
             return true;
         }
 
@@ -267,13 +275,13 @@ namespace HackLinks_Server.Computers.Processes
                 client.Send(NetUtil.PacketType.MESSG, "Usage: changetheme [filepathtotheme]");
                 return true;
             }
-            var file = process.ActiveDirectory.GetFile(command[1]);
+            var file = process.ActiveDirectory.GetFile(command[1], FileDescriptor.Flags.Read);
             if (file == null)
             {
                 client.Send(NetUtil.PacketType.MESSG, "File " + command[1] + " not found.");
                 return true;
             }
-            client.Send(NetUtil.PacketType.KERNL, "changetheme", file.GetContent());
+            client.Send(NetUtil.PacketType.KERNL, "changetheme", file.GetContentString());
             return true;
         }
     }

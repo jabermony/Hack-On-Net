@@ -55,25 +55,19 @@ namespace HackLinks_Server.Computers.Filesystems
         public abstract FileHandle GetFileHandleAt(string path, FileHandle currentDirectory);
 
         /// <summary>
-        ///  Get a integer permission value for the given <see cref="FileHandle"/>.
+        ///  Get a permission value for the given <see cref="FileHandle"/>.
         /// </summary>
         /// <param name="fileHandle"></param>
         /// <returns></returns>
-        public abstract int GetPermissions(FileHandle fileHandle);
+        public abstract Permission GetPermissions(FileHandle fileHandle);
 
         /// <summary>
-        ///  Set the integer permission value for the given <see cref="FileHandle"/>.
+        ///  Set the permission value for the given <see cref="FileHandle"/>.
         /// </summary>
         /// <param name="fileHandle"></param>
+        /// <param name="newValue"></param>
         /// <returns></returns>
-        public abstract void SetFilePermissions(FileHandle fileHandle, int newValue);
-
-        /// <summary>
-        /// Get the content of the given file as a stream of bytes.
-        /// </summary>
-        /// <param name="fileHandle"></param>
-        /// <returns></returns>
-        public abstract Stream GetFileContent(FileHandle fileHandle);
+        public abstract void SetFilePermissions(FileHandle fileHandle, Permission newValue);
 
         /// <summary>
         /// Get the checksum of the given file's content.
@@ -107,7 +101,7 @@ namespace HackLinks_Server.Computers.Filesystems
         /// Unlink the given fileHandle from it's parent file, parent is determined by the file handle's path.
         /// </summary>
         /// <param name="fileHandle"></param>
-        public abstract void UnlinkFile(FileHandle fileHandle);
+        public abstract void UnlinkFile(FileHandle parent, FileHandle fileHandle);
 
         /// <summary>
         /// Link the given fileHandle to a parent file.
@@ -135,5 +129,21 @@ namespace HackLinks_Server.Computers.Filesystems
         /// <param name="group"></param>
         /// <param name="type"></param>
         public abstract FileHandle CreateFile(FileHandle directory, string name, Permission permissions, int ownerId, Group group, FileType type);
+
+        public abstract void SetFileLength(FileHandle handle, int length, ref Error error);
+
+        public abstract int GetFileLength(FileHandle handle, ref Error error);
+
+        public abstract int ReadFile(FileHandle handle, byte[] buffer, int offset, int position, int count, ref Error error);
+
+        public abstract void WriteFile(FileHandle handle, byte[] inputBuffer, int offset, int position, int count, ref Error error);
+
+        public enum Error
+        {
+            None = 0,
+            Invalid_File_Descriptor = 1,
+            No_Such_File = 2,
+            Permission_Denied = 3,
+        }
     }
 }
